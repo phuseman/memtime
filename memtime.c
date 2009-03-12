@@ -2,7 +2,6 @@
  *---------------------------------------------------------------------------*
  *
  * Copyright (c) 2000, Johan Bengtsson
- * Copyright (c) 2009, Michael Weber
  * 
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
