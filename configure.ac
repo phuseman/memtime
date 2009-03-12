@@ -22,27 +22,36 @@ dnl Process this file with autoconf to produce a configure script.
 #
 ##############################################################################
 
-AC_INIT(memtime.c)
+AC_PREREQ(2.60)
+AC_INIT([memtime], [1.3.1],
+        [ltsmin-support@cs.utwente.nl])
+AC_CONFIG_MACRO_DIR([m4])
+AC_CONFIG_AUX_DIR([autotools])
+AM_INIT_AUTOMAKE([foreign])
+AC_CONFIG_SRCDIR([memtime.c])
 
-AC_CANONICAL_SYSTEM
+AC_CANONICAL_HOST
 
+AM_CFLAGS="-g -O2"
 AC_PROG_CC
 AC_PROG_INSTALL
+
+AX_TRY_CFLAGS_IFELSE([-W -Wall])
+AX_TRY_CFLAGS_IFELSE([-pipe])
 
 AC_EXEEXT
 AC_OBJEXT
 
-AC_SUBST(MACHDEP)
-case "$target_os" in
-	linux*)
-		MACHDEP=linux.c
-		;;
-	solaris*)
-		MACHDEP=sunos5.c
-		;;
-	*)
-		AC_MSG_ERROR(This system is not yet supported by memtime)
-		;;
+case "$host_os" in
+    linux*) machdep=linux ;;
+  solaris*) machdep=sunos5 ;;
+  darwin9*) machdep=darwin9 ;;
+  *) AC_MSG_ERROR([System "$host_os" is not yet supported.]) ;;
 esac
 
-AC_OUTPUT(Makefile)
+AM_CONDITIONAL([LINUX], [test x$machdep = xlinux ])
+AM_CONDITIONAL([SUNOS5], [test x$machdep = xsunos5 ])
+AM_CONDITIONAL([DARWIN9], [test x$machdep = xdarwin9 ])
+
+AC_CONFIG_FILES([Makefile])
+AC_OUTPUT

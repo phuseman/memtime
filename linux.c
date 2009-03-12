@@ -25,6 +25,7 @@
 #include <sys/time.h>
 #include <asm/param.h>
 #include <sys/stat.h>
+#include <time.h>
 #include <unistd.h>
 #include <fcntl.h>
 
@@ -40,19 +41,19 @@ static int proc_fd = -1;
 
 int init_machdep(pid_t process)
 {
-     char filename[64];
-     sprintf(filename, "/proc/%d/stat", (int)process);
+     char filename[255];
+     snprintf(filename, sizeof filename, "/proc/%d/stat", (int)process);
      proc_fd = open(filename, O_RDONLY);
 
      return (proc_fd != -1);
 }
 
-int get_sample(struct memtime_info *info)
+int get_sample(memtime_info_t *info)
 {
      static char buffer[2048];
      char *tmp;
-     int i, utime, stime;
-     unsigned int vsize, rss;
+     long i, utime, stime;
+     unsigned long vsize, rss;
      int rc;
 
      lseek(proc_fd, 0, SEEK_SET);
@@ -66,15 +67,15 @@ int get_sample(struct memtime_info *info)
      for (i=0, tmp=buffer; i < 13; i++)
 	  tmp = strchr(tmp + 1, ' ');
 
-     sscanf(tmp + 1, "%d %d", &utime, &stime);
+     sscanf(tmp + 1, "%lu %lu", &utime, &stime);
     
      for (/* empty */; i < 22; i++)
 	  tmp = strchr(tmp + 1, ' ');
 
-     sscanf(tmp + 1, "%u %u", &vsize, &rss);
+     sscanf(tmp + 1, "%lu %lu", &vsize, &rss);
 
-     info->utime_ms = utime * (1000 / HZ);
-     info->stime_ms = stime * (1000 / HZ);
+     info->utime_ms = utime * (1000 / CLOCKS_PER_SEC);
+     info->stime_ms = stime * (1000 / CLOCKS_PER_SEC);
 
      info->rss_kb = (rss * getpagesize()) / 1024;
      info->vsize_kb = vsize / 1024;
@@ -82,7 +83,7 @@ int get_sample(struct memtime_info *info)
      return 1;
 }
 
-unsigned int get_time()
+unsigned long get_time()
 {
      struct timeval now;
      struct timezone dummy;
@@ -97,7 +98,7 @@ unsigned int get_time()
      return (now.tv_sec * 1000) + (now.tv_usec / 1000);
 }
 
-int set_mem_limit(long int maxbytes)
+int set_mem_limit(unsigned long maxbytes)
 {
 	struct  rlimit rl;
 	long int softlimit=(long int)maxbytes*0.95;

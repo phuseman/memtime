@@ -1,7 +1,7 @@
-# -*- mode: Makefile; -*-
 ##############################################################################
 #
 # Copyright (c) 2000, Johan Bengtsson
+# Copyright (c) 2009, Michael Weber
 # 
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the "Software"),
@@ -22,67 +22,17 @@
 #
 ##############################################################################
 
-# Programs to use.
-CC   = @CC@
-LD   = $(CC)
-INSTALL = @INSTALL@
+ACLOCAL_AMFLAGS = -I m4
 
-# Options passed to the compiler and linker. 
-EXTRAFLAGS   = -Wall
-EXTRALDFLAGS = 
-DEFS         =
+bin_PROGRAMS = memtime
 
-# Where to find extra include files.
-INCDIR =
-
-# Extra libraries. 
-LIBS = 
-
-# The name of the executable.
-PROG = memtime
-
-# Source files.
-SRCS = memtime.c @MACHDEP@
-
-# ---- No changes are needed below this line ----
-
-prefix = @prefix@
-exec_prefix=@exec_prefix@
-bindir = @bindir@
-mandir = @mandir@
-srcdir = @srcdir@
-
-CFLAGS =  @CFLAGS@ $(EXTRAFLAGS)
-CPPFLAGS = $(INCDIR) $(DEFS) @CPPFLAGS@
-LDFLAGS = $(EXTRALDFLAGS) @LDFLAGS@
-
-VPATH=@srcdir@
-
-EXE=$(PROG)@EXEEXT@
-
-OBJS= $(addsuffix .@OBJEXT@,$(basename $(SRCS)))
-DEPS= $(addsuffix .d,$(basename $(SRCS)))
-
-%.d: %.c
-	$(CC) -MM $(CPPFLAGS) $< | sed -e "s/$*\.@OBJEXT@/$*.@OBJEXT@ $@/" > $@
-
-$(EXE): $(OBJS)
-	$(LD) $(LDFLAGS) -o $(EXE) $(OBJS) $(LIBS)
-
-clean:
-	rm -f *.@OBJEXT@ core *~ *.bak
-
-mostclean: clean 
-	rm -f $(EXE) *.d
-
-all: $(EXE)
-
-install: all
-	$(INSTALL) -d $(bindir) $(mandir)/man1
-	$(INSTALL) $(EXE) $(bindir)
-	$(INSTALL) @srcdir@/$(PROG).1 $(mandir)/man1
-
-.PHONY:	clean mostclean install
-
-include $(DEPS)
-
+memtime_SOURCES = memtime.c machdep.h
+if LINUX
+memtime_SOURCES += linux.c
+endif
+if DARWIN9
+memtime_SOURCES += darwin9.c
+endif
+if SUNOS5
+memtime_SOURCES += sunos5.c
+endif

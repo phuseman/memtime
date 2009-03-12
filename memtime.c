@@ -43,7 +43,16 @@
 #define CAN_USE_RLIMIT_RSS
 #define CAN_USE_RLIMIT_CPU
 
-int main (int argc, char *argv[] )
+void
+usage(FILE *ffile) 
+{
+     fprintf (ffile,
+              "Usage:\nmemtime [-t <interval>] [-e] [-m <maxkilobytes>] "
+              "[-c <maxcpuseconds>] <cmd> [<params>]\n");
+}
+
+int
+main (int argc, char *argv[])
 {
      struct rusage kid_usage;
      pid_t  kid;
@@ -51,29 +60,23 @@ int main (int argc, char *argv[] )
      int    i, opt, echo_args = 0, exit_flag;
      long int sample_time=0, time = 0;
 	 
-	 int maxkbytes=0; //kilobytes
-	 int maxseconds=0; //seconds
+	 unsigned long maxkbytes=0; //kilobytes
+	 unsigned long maxseconds=0; //seconds
 	 long int maxmillis=0;
 
-     unsigned int max_vsize = 0, max_rss = 0;
-     unsigned int start, end;
+     unsigned long max_vsize = 0, max_rss = 0;
+     unsigned long start, end;
 
-     struct memtime_info info;
-//     struct rlimit currentl;
+     memtime_info_t info;
 
      if (argc < 2) {
-	  char *tmp = strrchr(argv[0], '/');       
-	  tmp = (tmp ? tmp + 1 : argv[0]);
-
-	  fprintf(stderr, 
-		  "%s: usage %s [-t <interval>] [-e] [-m <maxkilobytes>] [-c <maxcpuseconds>] <cmd> [<params>]\n",
-		  tmp,tmp);
+          usage(stderr);          
 	  exit(EXIT_FAILURE);
      }
 
-     while ((opt = getopt(argc, argv, "+et:m:c:")) != -1) {
+     while ((opt = getopt(argc, argv, "+eht:m:c:")) != -1) {
 
-	  switch (opt) {
+	  switch (opt) {              
 	  case 'e' : 
 	       echo_args = 1;
 	       break;
@@ -88,7 +91,7 @@ int main (int argc, char *argv[] )
 	       break;
 	  case 'm' : 
 	       errno = 0;
-	       maxkbytes = atoi(optarg);
+	       maxkbytes = atol(optarg);
 	       if (errno) {
 		    perror("Illegal argument to m option");
 		    exit(EXIT_FAILURE);
@@ -97,14 +100,16 @@ int main (int argc, char *argv[] )
 
 	  case 'c' : 
 	       errno = 0;
-	       maxseconds = atoi(optarg);
+	       maxseconds = atol(optarg);
 	       if (errno) {
 		    perror("Illegal argument to c option");
 		    exit(EXIT_FAILURE);
 	       }
 		   maxmillis=1000*maxseconds;
 	       break;
-
+          case 'h':
+               usage (stdout);
+               exit(EXIT_SUCCESS);
 	  }
      }
 
@@ -160,7 +165,7 @@ int main (int argc, char *argv[] )
 		    end = get_time();
 		    
 		    fprintf(stderr,"%.2f user, %.2f system, %.2f elapsed"
-			    " -- VSize = %dKB, RSS = %dKB\n",
+			    " -- VSize = %luKB, RSS = %luKB\n",
 			    (double)info.utime_ms/1000.0,
 			    (double)info.stime_ms/1000.0,
 			    (double)(end - start)/1000.0,
@@ -202,11 +207,14 @@ int main (int argc, char *argv[] )
 			      + (double)kid_usage.ru_stime.tv_usec / 1E6);
 
 	  fprintf(stderr, "%.2f user, %.2f system, %.2f elapsed -- "
-		  "Max VSize = %dKB, Max RSS = %dKB\n", 
+		  "Max VSize = %luKB, Max RSS = %luKB\n", 
 		  kid_utime, kid_stime, (double)(end - start) / 1000.0,
 		  max_vsize, max_rss);
      }
 
-     exit(EXIT_SUCCESS);
+     if(WIFEXITED(kid_status))
+	  exit(WEXITSTATUS(kid_status));
+     else 
+	  exit(128 + WTERMSIG(kid_status));
 }
 

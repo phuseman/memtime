@@ -50,7 +50,7 @@ int init_machdep(pid_t process)
      return (psinfo_fd != -1 && pstatus_fd != -1);
 }
 
-int get_sample(struct memtime_info *info)
+int get_sample(memtime_info_t *info)
 {
      struct psinfo pinfo;
      struct pstatus sinfo;
@@ -79,7 +79,7 @@ int get_sample(struct memtime_info *info)
      return 1;
 }
 
-unsigned int get_time()
+unsigned long get_time()
 {
      struct timeval now;
      struct timezone dummy;
