@@ -1,9 +1,9 @@
-.TH memtime 1 "Dec 2001"
+.TH memtime 1 "March 2009"
 .SH NAME
 memtime - Show the time and memory used by a command
 .SH SYNOPSIS
 .B memtime
-[\-t \fIperiod\fP] [\-e] [\-m \fImaxkilobytes\fP] [\-t \fImaxseconds\fP] \fIcommand\fP [\fIarg\fP...]
+[\-h] [\-t \fIperiod\fP] [\-e] [\-m \fImaxkilobytes\fP] [\-t \fImaxseconds\fP] \fIcommand\fP [\fIarg\fP...]
 .SH DESCRIPTION
 The \fImemtime\fP program invoke \fIcommand\fP with the parameters \fIarg\fP,
 wait for its completion and print an estimation of the time and memory used by
@@ -12,6 +12,9 @@ and \fImaxkilobytes\fP to limit resources available for this process.
 .PP
 .SH OPTIONS
 memtime accept the following options:
+.TP 8
+.B \-h
+Print short usage information.
 .TP 8
 .B \-t \fIperiod\fP
 Print an estimation of the currently used resources every \fIperiod\fP seconds.
@@ -31,6 +34,8 @@ The memory information is collected by sampling, and the precision might not
 be good for commands with short execution time.
 .SH COPYRIGHT
 Copyright \(co 2000 by Johan Bengtsson
+.RS 0
+Copyright \(co 2009 by Michael Weber
 .PP
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -50,6 +55,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 .SH AUTHOR
 Johan Bengtsson <johanb@Update.UU.SE>
+.RS 0
+Michael Weber <michaelw@foldr.org>
 .PP
 Memory and time restriction functionality added by
 Juhan Ernits <juhan@cc.ioc.ee> in December, 2001.
