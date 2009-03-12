@@ -1,0 +1,55 @@
+.TH memtime 1 "Dec 2001"
+.SH NAME
+memtime - Show the time and memory used by a command
+.SH SYNOPSIS
+.B memtime
+[\-t \fIperiod\fP] [\-e] [\-m \fImaxkilobytes\fP] [\-t \fImaxseconds\fP] \fIcommand\fP [\fIarg\fP...]
+.SH DESCRIPTION
+The \fImemtime\fP program invoke \fIcommand\fP with the parameters \fIarg\fP,
+wait for its completion and print an estimation of the time and memory used by
+\fIcommand\fP. In addition user can specify time and space limits by \fImaxseconds\fP 
+and \fImaxkilobytes\fP to limit resources available for this process. 
+.PP
+.SH OPTIONS
+memtime accept the following options:
+.TP 8
+.B \-t \fIperiod\fP
+Print an estimation of the currently used resources every \fIperiod\fP seconds.
+.TP 8
+.B \-e
+Echo \fIcommand\fP and \fIarg\fP.
+.TP 8
+.B \-m \fImaxkilobytes\fP
+Memory limit for \fIcommand\fP. Implemented through RLIMIT mechanism.
+.TP 8
+.B \-c \fImaxcpuseconds\fP
+User time limit for \fIcommand\fP. Implemented through RLIMIT mechanism.
+.SH BUGS
+The update period is only approximate.
+.PP
+The memory information is collected by sampling, and the precision might not
+be good for commands with short execution time.
+.SH COPYRIGHT
+Copyright \(co 2000 by Johan Bengtsson
+.PP
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions: The above copyright
+notice and this permission notice shall be included in all copies or
+substantial portions of the Software.
+.PP
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+.SH AUTHOR
+Johan Bengtsson <johanb@Update.UU.SE>
+.PP
+Memory and time restriction functionality added by
+Juhan Ernits <juhan@cc.ioc.ee> in December, 2001.

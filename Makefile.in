@@ -1,0 +1,88 @@
+# -*- mode: Makefile; -*-
+##############################################################################
+#
+# Copyright (c) 2000, Johan Bengtsson
+# 
+# Permission is hereby granted, free of charge, to any person obtaining a
+# copy of this software and associated documentation files (the "Software"),
+# to deal in the Software without restriction, including without limitation
+# the rights to use, copy, modify, merge, publish, distribute, sublicense,
+# and/or sell copies of the Software, and to permit persons to whom the
+# Software is furnished to do so, subject to the following conditions:
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+# FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+# DEALINGS IN THE SOFTWARE.
+#
+##############################################################################
+
+# Programs to use.
+CC   = @CC@
+LD   = $(CC)
+INSTALL = @INSTALL@
+
+# Options passed to the compiler and linker. 
+EXTRAFLAGS   = -Wall
+EXTRALDFLAGS = 
+DEFS         =
+
+# Where to find extra include files.
+INCDIR =
+
+# Extra libraries. 
+LIBS = 
+
+# The name of the executable.
+PROG = memtime
+
+# Source files.
+SRCS = memtime.c @MACHDEP@
+
+# ---- No changes are needed below this line ----
+
+prefix = @prefix@
+exec_prefix=@exec_prefix@
+bindir = @bindir@
+mandir = @mandir@
+srcdir = @srcdir@
+
+CFLAGS =  @CFLAGS@ $(EXTRAFLAGS)
+CPPFLAGS = $(INCDIR) $(DEFS) @CPPFLAGS@
+LDFLAGS = $(EXTRALDFLAGS) @LDFLAGS@
+
+VPATH=@srcdir@
+
+EXE=$(PROG)@EXEEXT@
+
+OBJS= $(addsuffix .@OBJEXT@,$(basename $(SRCS)))
+DEPS= $(addsuffix .d,$(basename $(SRCS)))
+
+%.d: %.c
+	$(CC) -MM $(CPPFLAGS) $< | sed -e "s/$*\.@OBJEXT@/$*.@OBJEXT@ $@/" > $@
+
+$(EXE): $(OBJS)
+	$(LD) $(LDFLAGS) -o $(EXE) $(OBJS) $(LIBS)
+
+clean:
+	rm -f *.@OBJEXT@ core *~ *.bak
+
+mostclean: clean 
+	rm -f $(EXE) *.d
+
+all: $(EXE)
+
+install: all
+	$(INSTALL) -d $(bindir) $(mandir)/man1
+	$(INSTALL) $(EXE) $(bindir)
+	$(INSTALL) @srcdir@/$(PROG).1 $(mandir)/man1
+
+.PHONY:	clean mostclean install
+
+include $(DEPS)
+

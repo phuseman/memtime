@@ -1,0 +1,26 @@
+2000-05-25  Johan Bengtsson  <johanb@DoCS.UU.SE>
+
+	* linux.c (init_machdep): Added explicit cast
+
+	* memtime.c (main): 
+	- Removed adaptive sample interval. 
+	- Added printing of exit status or terminating signal.
+	
+	* sunos5.c (init_machdep): Added explicit casts
+	(get_sample): Removed risk for partial updates
+
+	* Created.
+
+2000-05-26  Johan Bengtsson  <johanb@DoCS.UU.SE>
+
+	* configure.in: Moved checking for executable extension behind 
+		checking for a C compiler
+
+2001-12-03 Juhan Ernits <juhan@cc.ioc.ee>
+
+	* max memory to be used by process
+	can be specified. Implemented through rlimit mechanism.
+
+	* max cpu time to be used by process
+	can be specified. Implemented through rlimit mechanism.
+
