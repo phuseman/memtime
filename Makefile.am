@@ -26,13 +26,17 @@ ACLOCAL_AMFLAGS = -I m4
 
 bin_PROGRAMS = memtime
 
+AM_CPPFLAGS =
 memtime_SOURCES = memtime.c machdep.h
 if LINUX
 memtime_SOURCES += linux.c
+AM_CPPFLAGS += -DCAN_USE_RLIMIT_RSS -DCAN_USE_RLIMIT_CPU
 endif
 if DARWIN9
 memtime_SOURCES += darwin9.c
+AM_CPPFLAGS += -DCAN_USE_RLIMIT_CPU
 endif
 if SUNOS5
 memtime_SOURCES += sunos5.c
+AM_CPPFLAGS += -DCAN_USE_RLIMIT_RSS -DCAN_USE_RLIMIT_CPU
 endif
