@@ -49,10 +49,10 @@ sampling_fork()
      case 0:
           return pid;
      default:
-          snprintf(filename, sizeof filename, "/proc/%d/psinfo", (int)process);
+          snprintf(filename, sizeof filename, "/proc/%d/psinfo", (int)pid);
           psinfo_fd = open(filename, O_RDONLY | O_RSYNC);
 
-          snprintf(filename, sizeof filename, "/proc/%d/status", (int)process);
+          snprintf(filename, sizeof filename, "/proc/%d/status", (int)pid);
           pstatus_fd = open(filename, O_RDONLY | O_RSYNC);
           return (psinfo_fd != -1 && pstatus_fd != -1) ? pid : -1;
      }

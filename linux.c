@@ -49,7 +49,7 @@ sampling_fork()
      case 0:
           return pid;
      default:
-          snprintf(filename, sizeof filename, "/proc/%d/stat", (int)process);
+          snprintf(filename, sizeof filename, "/proc/%d/stat", (int)pid);
           proc_fd = open(filename, O_RDONLY);
           return (proc_fd != -1) ? pid : -1;
      }
