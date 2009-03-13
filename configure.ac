@@ -2,6 +2,7 @@ dnl Process this file with autoconf to produce a configure script.
 ##############################################################################
 #
 # Copyright (c) 2000, Johan Bengtsson
+# Copyright (c) 2009, Michael Weber
 # 
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the "Software"),
@@ -24,7 +25,7 @@ dnl Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.60)
 AC_INIT([memtime], [1.3.1],
-        [ltsmin-support@cs.utwente.nl])
+        [michaelw+memtime@foldr.org])
 AC_CONFIG_MACRO_DIR([m4])
 AC_CONFIG_AUX_DIR([autotools])
 AM_INIT_AUTOMAKE([foreign])
@@ -36,6 +37,9 @@ AM_CFLAGS="-g -O2"
 AC_PROG_CC
 AC_PROG_INSTALL
 
+AC_PROG_CC_C99
+AS_IF([test x"$ac_cv_prog_cc_c99" = xno],
+  [AC_MSG_FAILURE([no acceptable C99 compiler found.])])
 AX_TRY_CFLAGS_IFELSE([-W -Wall])
 AX_TRY_CFLAGS_IFELSE([-pipe])
 
