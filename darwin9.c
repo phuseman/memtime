@@ -1,9 +1,8 @@
-/* This file is adapted from code originally supplied by Apple
- * Computer, Inc.  The Berkeley Open Infrastructure for Network
- * Computing project has modified the original code and made additions
- * as of September 22, 2006.  The original Apple Public Source License
- * statement appears below:
- */
+/* This file is adapted from code originally supplied by Apple Computer,
+ * Inc.  The Berkeley Open Infrastructure for Network Computing project
+ * has modified the original code and made additions as of September 22,
+ * 2006.  The original Apple Public Source License statement appears
+ * below: */
 
 /*
  * Copyright (c) 2002-2004 Apple Computer, Inc.  All rights reserved.
@@ -42,105 +41,107 @@
 
 static task_t       task = MACH_PORT_NULL;
 
-static task_t
-recv_task_port (mach_port_t notify_port)
+#define CHECK_MACH_ERROR(err, msg)                                      \
+    if (err != KERN_SUCCESS) {                                          \
+        mach_error (msg, err);                                          \
+        return -1;                                                      \
+    }                                                                   \
+
+
+static int
+setup_bootstrap_port (mach_port_t *bs_port)
 {
-    kern_return_t err;
+    kern_return_t       err;
+    mach_port_t         notify_port = MACH_PORT_NULL;
+    err = mach_port_allocate (mach_task_self (),
+                              MACH_PORT_RIGHT_RECEIVE, &notify_port);
+    CHECK_MACH_ERROR (err, "mach_port_allocate failed:");
+
+    err = mach_port_insert_right (mach_task_self (),
+                                  notify_port,
+                                  notify_port,
+                                  MACH_MSG_TYPE_MAKE_SEND);
+    CHECK_MACH_ERROR (err, "mach_port_insert_right failed:");
+
+    err = task_set_bootstrap_port (mach_task_self (), notify_port);
+    CHECK_MACH_ERROR (err, "task_set_bootstrap_port failed:");
+
+    *bs_port = notify_port;
+    return 0;
+}
+
+static int
+recv_port (mach_port_t notify_port, mach_port_t *port)
+{
+    kern_return_t       err;
     struct {
-        mach_msg_header_t header;
-        mach_msg_body_t body;
+        mach_msg_header_t          header;
+        mach_msg_body_t            body;
         mach_msg_port_descriptor_t task_port;
-        mach_msg_trailer_t trailer;
+        mach_msg_trailer_t         trailer;
     } msg;
 
     err = mach_msg (&msg.header, MACH_RCV_MSG,
                     0, sizeof msg, notify_port,
                     MACH_MSG_TIMEOUT_NONE, MACH_PORT_NULL);
-    if (err != KERN_SUCCESS) {
-        mach_error ("mach_msg failed:", err);
-        return MACH_PORT_NULL;
-    }
+    CHECK_MACH_ERROR (err, "mach_msg failed:");
 
-    return msg.task_port.name;
+    *port = msg.task_port.name;
+    return 0;
 }
 
-int
-send_task_port()
+static int
+send_port (mach_port_t port)
 {
-    kern_return_t err;
-    mach_port_t bs_port = MACH_PORT_NULL;
+    kern_return_t       err;
+    mach_port_t         bs_port = MACH_PORT_NULL;
     struct {
-        mach_msg_header_t header;
-        mach_msg_body_t body;
+        mach_msg_header_t          header;
+        mach_msg_body_t            body;
         mach_msg_port_descriptor_t task_port;
     } msg;
 
-    err = task_get_bootstrap_port (mach_task_self(), &bs_port);
-    if (err != KERN_SUCCESS) {
-        mach_error ("task_get_bootstrap_port failed:", err);
-        return -1;
-    }
+    err = task_get_bootstrap_port (mach_task_self (), &bs_port);
+    CHECK_MACH_ERROR (err, "task_get_bootstrap_port failed:");
 
     msg.header.msgh_remote_port = bs_port;
     msg.header.msgh_local_port = MACH_PORT_NULL;
-    msg.header.msgh_bits = MACH_MSGH_BITS(MACH_MSG_TYPE_COPY_SEND, 0) |
+    msg.header.msgh_bits = MACH_MSGH_BITS (MACH_MSG_TYPE_COPY_SEND, 0) |
         MACH_MSGH_BITS_COMPLEX;
     msg.header.msgh_size = sizeof msg;
 
-    msg.body.msgh_descriptor_count  = 1;
-    msg.task_port.name              = mach_task_self();
-    msg.task_port.disposition       = MACH_MSG_TYPE_COPY_SEND;
-    msg.task_port.type              = MACH_MSG_PORT_DESCRIPTOR;
+    msg.body.msgh_descriptor_count = 1;
+    msg.task_port.name = port;
+    msg.task_port.disposition = MACH_MSG_TYPE_COPY_SEND;
+    msg.task_port.type = MACH_MSG_PORT_DESCRIPTOR;
 
     err = mach_msg_send (&msg.header);
-    if (err != KERN_SUCCESS) {
-        mach_error ("mach_msg_send failed:", err);
-        return -1;
-    }
+    CHECK_MACH_ERROR (err, "mach_msg_send failed:");
+
     return 0;
 }
 
 pid_t
-sampling_fork()
+sampling_fork ()
 {
-    kern_return_t err;
-    mach_port_t notify_port = MACH_PORT_NULL;
-    err = mach_port_allocate (mach_task_self(),
-                              MACH_PORT_RIGHT_RECEIVE,
-                              &notify_port);
-    if (err != KERN_SUCCESS) {
-        mach_error ("mach_port_allocate failed:", err);
+    mach_port_t         notify_port = MACH_PORT_NULL;
+
+    if (setup_bootstrap_port (&notify_port) != 0) {
         return -1;
     }
 
-    err = mach_port_insert_right (mach_task_self(),
-                                  notify_port,
-                                  notify_port,
-                                  MACH_MSG_TYPE_MAKE_SEND);
-    if (err != KERN_SUCCESS) {
-        mach_error("mach_port_insert_right failed:", err);
-        return -1;
-    }
-
-    err = task_set_bootstrap_port (mach_task_self(), notify_port);
-    if (err != KERN_SUCCESS) {
-        mach_error ("task_set_bootstrap_port failed:", err);
-        return -1;
-    }
-
-    pid_t pid;
-    switch (pid = fork()) {
+    pid_t               pid;
+    switch (pid = fork ()) {
     case -1:
         return pid;
 
     case 0:
-        if (send_task_port() == -1)
+        if (send_port (mach_task_self ()) != 0)
             return -1;
         break;
 
     default:
-        task = recv_task_port (notify_port);
-        if (task == MACH_PORT_NULL)
+        if (recv_port (notify_port, &task) != 0)
             return -1;
         break;
     }
@@ -149,18 +150,19 @@ sampling_fork()
 }
 
 int
-get_sample (memtime_info_t * info)
+get_sample (memtime_info_t *info)
 {
     struct task_basic_info ti;
     mach_msg_type_number_t ti_count = TASK_BASIC_INFO_COUNT;
     task_info (task, TASK_BASIC_INFO, (task_info_t)&ti, &ti_count);
 
     info->rss_kb = ti.resident_size / 1024UL;
-    unsigned long int   vmsize_bytes = ti.virtual_size;
-    vm_address_t        address;
-    vm_size_t           size;
-    mach_msg_type_number_t  count;
-    mach_port_t             object_name;
+    unsigned long int      vmsize_bytes = ti.virtual_size;
+#if 1
+    vm_address_t           address;
+    vm_size_t              size;
+    mach_msg_type_number_t count;
+    mach_port_t            object_name;
     vm_region_top_info_data_t r_info;
 
     /*
@@ -170,9 +172,9 @@ get_sample (memtime_info_t * info)
     for (address = 0; ; address += size) {
         /* Get memory region. */
         count = VM_REGION_TOP_INFO_COUNT;
-        if (vm_region(task, &address, &size,
-                      VM_REGION_TOP_INFO, (vm_region_info_t)&r_info, &count,
-                      &object_name) != KERN_SUCCESS) {
+        if (vm_region (task, &address, &size,
+                       VM_REGION_TOP_INFO, (vm_region_info_t)&r_info,
+                       &count, &object_name) != KERN_SUCCESS) {
             /* No more memory regions. */
             break;
         }
@@ -188,25 +190,30 @@ get_sample (memtime_info_t * info)
              * virtual memory size and exit loop.
              */
             if (r_info.share_mode == SM_EMPTY) {
-                vm_region_basic_info_data_64_t	b_info;
+                vm_region_basic_info_data_64_t b_info;
 
                 count = VM_REGION_BASIC_INFO_COUNT_64;
-                if (vm_region_64(task, &address,
-                                 &size, VM_REGION_BASIC_INFO,
-                                 (vm_region_info_t)&b_info, &count,
-                                 &object_name) != KERN_SUCCESS) {
+                if (vm_region_64 (task, &address,
+                                  &size, VM_REGION_BASIC_INFO,
+                                  (vm_region_info_t)&b_info, &count,
+                                  &object_name) != KERN_SUCCESS) {
                     break;
                 }
 
                 if (b_info.reserved) {
-                    vmsize_bytes -= (SHARED_TEXT_REGION_SIZE + SHARED_DATA_REGION_SIZE);
+                    vmsize_bytes -=
+                        (SHARED_TEXT_REGION_SIZE +
+                         SHARED_DATA_REGION_SIZE);
                     break;
                 }
             }
         }
     }
-/*     if (vmsize_bytes > SHARED_TEXT_REGION_SIZE + SHARED_DATA_REGION_SIZE) */
-/*         vmsize_bytes -= SHARED_TEXT_REGION_SIZE + SHARED_DATA_REGION_SIZE; */
+#else
+    if (vmsize_bytes > SHARED_TEXT_REGION_SIZE +
+    SHARED_DATA_REGION_SIZE)
+    vmsize_bytes -= SHARED_TEXT_REGION_SIZE + SHARED_DATA_REGION_SIZE;
+#endif
     info->vsize_kb = vmsize_bytes / 1024UL;
 
     info->utime_ms = ti.user_time.seconds * 1000 +
@@ -224,10 +231,10 @@ get_time ()
     struct timezone     dummy;
 
     if (gettimeofday (&now, &dummy) == -1) {
-        perror ("getrusage");
+        perror ("gettimeofday");
         return 0;
     }
-    
+
     return (now.tv_sec * 1000) + (now.tv_usec / 1000);
 }
 
@@ -235,7 +242,7 @@ int
 set_mem_limit (unsigned long maxbytes)
 {
     struct rlimit       rl;
-    long int            softlimit = (long int)maxbytes * 95/100;
+    long int            softlimit = (long int)maxbytes * 95 / 100;
     rl.rlim_cur = softlimit;
     rl.rlim_max = maxbytes;
     return setrlimit (RLIMIT_RSS, &rl);
