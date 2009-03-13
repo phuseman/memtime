@@ -43,7 +43,6 @@ AS_IF([test x"$ac_cv_prog_cc_c99" = xno],
 AX_TRY_CFLAGS_IFELSE([-W -Wall])
 AX_TRY_CFLAGS_IFELSE([-pipe])
 
-AC_EXEEXT
 AC_OBJEXT
 
 case "$host_os" in
