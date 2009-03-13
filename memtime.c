@@ -123,10 +123,10 @@ main (int argc, char *argv[])
 
      start = get_time();
     
-     switch (kid = fork()) {
+     switch (kid = sampling_fork()) {
 	
      case -1 :
-	  perror("fork failed");
+	  perror("sampling_fork failed");
 	  exit(EXIT_FAILURE);
 	
      case 0 :	
@@ -146,11 +146,6 @@ main (int argc, char *argv[])
 	
      default :
 	  break;
-     }
-
-     if (!init_machdep(kid)) {
-	  fprintf(stderr, "%s: Failed to initialise sampling.\n", argv[0]);
-	  exit(EXIT_FAILURE);
      }
 
      do {

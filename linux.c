@@ -39,13 +39,20 @@
 static int proc_fd = -1;
 
 
-int init_machdep(pid_t process)
+pid_t
+sampling_fork()
 {
      char filename[255];
-     snprintf(filename, sizeof filename, "/proc/%d/stat", (int)process);
-     proc_fd = open(filename, O_RDONLY);
-
-     return (proc_fd != -1);
+     pid_t pid;
+     switch (pid = fork()) {
+     case -1:
+     case 0:
+          return pid;
+     default:
+          snprintf(filename, sizeof filename, "/proc/%d/stat", (int)process);
+          proc_fd = open(filename, O_RDONLY);
+          return (proc_fd != -1) ? pid : -1;
+     }
 }
 
 int get_sample(memtime_info_t *info)

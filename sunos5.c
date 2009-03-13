@@ -38,16 +38,25 @@
 static int psinfo_fd = -1;
 static int pstatus_fd = -1;
 
-int init_machdep(pid_t process)
+pid_t
+sampling_fork()
 {
      char filename[64];
-     sprintf(filename, "/proc/%d/psinfo", (int)process);
-     psinfo_fd = open(filename, O_RDONLY | O_RSYNC);
+     pid_t pid;
 
-     sprintf(filename, "/proc/%d/status", (int)process);
-     pstatus_fd = open(filename, O_RDONLY | O_RSYNC);
+     switch (pid = fork()) {
+     case -1:
+     case 0:
+          return pid;
+     default:
+          snprintf(filename, sizeof filename, "/proc/%d/psinfo", (int)process);
+          psinfo_fd = open(filename, O_RDONLY | O_RSYNC);
 
-     return (psinfo_fd != -1 && pstatus_fd != -1);
+          snprintf(filename, sizeof filename, "/proc/%d/status", (int)process);
+          pstatus_fd = open(filename, O_RDONLY | O_RSYNC);
+          return (psinfo_fd != -1 && pstatus_fd != -1) ? pid : -1;
+     }
+
 }
 
 int get_sample(memtime_info_t *info)

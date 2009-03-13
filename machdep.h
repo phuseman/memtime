@@ -24,7 +24,9 @@
 
 #ifndef MACHDEP_H
 #define MACHDEP_H
- 
+
+#include <unistd.h>
+
 typedef struct {
      unsigned long utime_ms;
      unsigned long stime_ms;
@@ -32,9 +34,11 @@ typedef struct {
      unsigned long vsize_kb;
 } memtime_info_t;
 
-int init_machdep(pid_t process);
+pid_t sampling_fork();
 int get_sample(memtime_info_t *info);
 unsigned long get_time();
 int set_mem_limit(unsigned long maxbytes);
 int set_cpu_limit(long int maxseconds);
+
+
 #endif /* MACHDEP_H */
