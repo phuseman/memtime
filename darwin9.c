@@ -1,3 +1,32 @@
+/* This file is adapted from code originally supplied by Apple
+ * Computer, Inc.  The Berkeley Open Infrastructure for Network
+ * Computing project has modified the original code and made additions
+ * as of September 22, 2006.  The original Apple Public Source License
+ * statement appears below:
+ */
+
+/*
+ * Copyright (c) 2002-2004 Apple Computer, Inc.  All rights reserved.
+ *
+ * @APPLE_LICENSE_HEADER_START@
+ *
+ * The contents of this file constitute Original Code as defined in and
+ * are subject to the Apple Public Source License Version 1.1 (the
+ * "License").  You may not use this file except in compliance with the
+ * License.  Please obtain a copy of the License at
+ * http://www.apple.com/publicsource and read it before using this file.
+ *
+ * This Original Code and all software distributed under the License are
+ * distributed on an "AS IS" basis, WITHOUT WARRANTY OF ANY KIND, EITHER
+ * EXPRESS OR IMPLIED, AND APPLE HEREBY DISCLAIMS ALL SUCH WARRANTIES,
+ * INCLUDING WITHOUT LIMITATION, ANY WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE OR NON-INFRINGEMENT.  Please see the
+ * License for the specific language governing rights and limitations
+ * under the License.
+ *
+ * @APPLE_LICENSE_HEADER_END@
+ */
+
 #include <stdlib.h>
 #include <unistd.h>
 #include <stdio.h>
@@ -122,27 +151,68 @@ sampling_fork()
 int
 get_sample (memtime_info_t * info)
 {
-    struct task_basic_info task_basic_info;
-    mach_msg_type_number_t task_basic_info_count = TASK_BASIC_INFO_COUNT;
-    task_info (task, TASK_BASIC_INFO, (task_info_t)&task_basic_info,
-               &task_basic_info_count);
+    struct task_basic_info ti;
+    mach_msg_type_number_t ti_count = TASK_BASIC_INFO_COUNT;
+    task_info (task, TASK_BASIC_INFO, (task_info_t)&ti, &ti_count);
 
-    info->rss_kb = task_basic_info.resident_size / 1024UL;
-    unsigned long int   vmsize_bytes = task_basic_info.virtual_size;
-    if (vmsize_bytes > SHARED_TEXT_REGION_SIZE + SHARED_DATA_REGION_SIZE)
-        vmsize_bytes -= SHARED_TEXT_REGION_SIZE + SHARED_DATA_REGION_SIZE;
+    info->rss_kb = ti.resident_size / 1024UL;
+    unsigned long int   vmsize_bytes = ti.virtual_size;
+    vm_address_t        address;
+    vm_size_t           size;
+    mach_msg_type_number_t  count;
+    mach_port_t             object_name;
+    vm_region_top_info_data_t r_info;
+
+    /*
+     * Iterate through the VM regions of the process and determine
+     * the amount of memory of various types it has mapped.
+     */
+    for (address = 0; ; address += size) {
+        /* Get memory region. */
+        count = VM_REGION_TOP_INFO_COUNT;
+        if (vm_region(task, &address, &size,
+                      VM_REGION_TOP_INFO, (vm_region_info_t)&r_info, &count,
+                      &object_name) != KERN_SUCCESS) {
+            /* No more memory regions. */
+            break;
+        }
+
+        if (address >= GLOBAL_SHARED_TEXT_SEGMENT
+            && address < (GLOBAL_SHARED_DATA_SEGMENT
+                          + SHARED_DATA_REGION_SIZE)) {
+            /* This region is private shared. */
+
+            /*
+             * Check if this process has the globally shared
+             * text and data regions mapped in.  If so, adjust
+             * virtual memory size and exit loop.
+             */
+            if (r_info.share_mode == SM_EMPTY) {
+                vm_region_basic_info_data_64_t	b_info;
+
+                count = VM_REGION_BASIC_INFO_COUNT_64;
+                if (vm_region_64(task, &address,
+                                 &size, VM_REGION_BASIC_INFO,
+                                 (vm_region_info_t)&b_info, &count,
+                                 &object_name) != KERN_SUCCESS) {
+                    break;
+                }
+
+                if (b_info.reserved) {
+                    vmsize_bytes -= (SHARED_TEXT_REGION_SIZE + SHARED_DATA_REGION_SIZE);
+                    break;
+                }
+            }
+        }
+    }
+/*     if (vmsize_bytes > SHARED_TEXT_REGION_SIZE + SHARED_DATA_REGION_SIZE) */
+/*         vmsize_bytes -= SHARED_TEXT_REGION_SIZE + SHARED_DATA_REGION_SIZE; */
     info->vsize_kb = vmsize_bytes / 1024UL;
 
-    struct rusage       rusage;
-    if (getrusage (RUSAGE_SELF, &rusage) == -1) {
-        perror ("getrusage");
-        return 0;
-    }
-
-    info->utime_ms = rusage.ru_utime.tv_sec * 1000 +
-        rusage.ru_utime.tv_usec / 1000;
-    info->stime_ms = rusage.ru_stime.tv_sec * 1000 +
-        rusage.ru_stime.tv_usec / 1000;
+    info->utime_ms = ti.user_time.seconds * 1000 +
+        ti.user_time.microseconds / 1000;
+    info->stime_ms = ti.system_time.seconds * 1000 +
+        ti.system_time.microseconds / 1000;
 
     return 1;
 }
@@ -165,10 +235,10 @@ int
 set_mem_limit (unsigned long maxbytes)
 {
     struct rlimit       rl;
-    long int            softlimit = (long int)maxbytes * 0.95;
+    long int            softlimit = (long int)maxbytes * 95/100;
     rl.rlim_cur = softlimit;
     rl.rlim_max = maxbytes;
-    return setrlimit (RLIMIT_AS, &rl);
+    return setrlimit (RLIMIT_RSS, &rl);
 }
 
 int
