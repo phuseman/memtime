@@ -1,13 +1,15 @@
+2009-03-13  Michael Weber  <michaelw@foldr.org>
+
+	* machdep.h (init_machdep): removed
+	* machdep.h (sampling_fork): added
+
 2009-03-12  Michael Weber  <michaelw@foldr.org>
 
-      * memtime.c: 64-bit clean
+        * memtime.c: 64-bit clean
 
-      * darwin9.c: ported to Darwin9, needs either
-        + superuser rights, or
-        + calling user added to procmod group, or
-        + security disabled (sysctl kern.tfp.policy)
+        * darwin9.c: ported to Darwin9
 
-      * configure.ac: automake-ified
+        * configure.ac: automake-ified
 
 2001-12-03 Juhan Ernits <juhan@cc.ioc.ee>
 
