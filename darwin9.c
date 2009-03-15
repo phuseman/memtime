@@ -134,12 +134,10 @@ sampling_fork ()
     switch (pid = fork ()) {
     case -1:
         return pid;
-
     case 0:
         if (send_port (mach_task_self ()) != 0)
             return -1;
         break;
-
     default:
         if (recv_port (notify_port, &task) != 0)
             return -1;
