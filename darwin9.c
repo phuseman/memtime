@@ -49,29 +49,26 @@ static task_t       task = MACH_PORT_NULL;
 
 
 static int
-setup_bootstrap_port (mach_port_t *bs_port)
+setup_recv_port (mach_port_t *recv_port)
 {
     kern_return_t       err;
-    mach_port_t         notify_port = MACH_PORT_NULL;
+    mach_port_t         port = MACH_PORT_NULL;
     err = mach_port_allocate (mach_task_self (),
-                              MACH_PORT_RIGHT_RECEIVE, &notify_port);
+                              MACH_PORT_RIGHT_RECEIVE, &port);
     CHECK_MACH_ERROR (err, "mach_port_allocate failed:");
 
     err = mach_port_insert_right (mach_task_self (),
-                                  notify_port,
-                                  notify_port,
+                                  port,
+                                  port,
                                   MACH_MSG_TYPE_MAKE_SEND);
     CHECK_MACH_ERROR (err, "mach_port_insert_right failed:");
 
-    err = task_set_bootstrap_port (mach_task_self (), notify_port);
-    CHECK_MACH_ERROR (err, "task_set_bootstrap_port failed:");
-
-    *bs_port = notify_port;
+    *recv_port = port;
     return 0;
 }
 
 static int
-recv_port (mach_port_t notify_port, mach_port_t *port)
+recv_port (mach_port_t recv_port, mach_port_t *port)
 {
     kern_return_t       err;
     struct {
@@ -82,7 +79,7 @@ recv_port (mach_port_t notify_port, mach_port_t *port)
     } msg;
 
     err = mach_msg (&msg.header, MACH_RCV_MSG,
-                    0, sizeof msg, notify_port,
+                    0, sizeof msg, recv_port,
                     MACH_MSG_TIMEOUT_NONE, MACH_PORT_NULL);
     CHECK_MACH_ERROR (err, "mach_msg failed:");
 
@@ -91,20 +88,17 @@ recv_port (mach_port_t notify_port, mach_port_t *port)
 }
 
 static int
-send_port (mach_port_t port)
+send_port (mach_port_t remote_port, mach_port_t port)
 {
     kern_return_t       err;
-    mach_port_t         bs_port = MACH_PORT_NULL;
+
     struct {
         mach_msg_header_t          header;
         mach_msg_body_t            body;
         mach_msg_port_descriptor_t task_port;
     } msg;
 
-    err = task_get_bootstrap_port (mach_task_self (), &bs_port);
-    CHECK_MACH_ERROR (err, "task_get_bootstrap_port failed:");
-
-    msg.header.msgh_remote_port = bs_port;
+    msg.header.msgh_remote_port = remote_port;
     msg.header.msgh_local_port = MACH_PORT_NULL;
     msg.header.msgh_bits = MACH_MSGH_BITS (MACH_MSG_TYPE_COPY_SEND, 0) |
         MACH_MSGH_BITS_COMPLEX;
@@ -124,23 +118,52 @@ send_port (mach_port_t port)
 pid_t
 sampling_fork ()
 {
-    mach_port_t         notify_port = MACH_PORT_NULL;
+    kern_return_t       err;
+    mach_port_t         parent_recv_port = MACH_PORT_NULL;
+    mach_port_t         child_recv_port = MACH_PORT_NULL;
 
-    if (setup_bootstrap_port (&notify_port) != 0) {
+    if (setup_recv_port (&parent_recv_port) != 0)
         return -1;
-    }
+    err = task_set_bootstrap_port (mach_task_self (), parent_recv_port);
+    CHECK_MACH_ERROR (err, "task_set_bootstrap_port failed:");
 
+    /* This is a very roundabout way to get the child's task port to
+     * the parent via a new bootstrap port, AND setting the child's
+     * bootstrap port back to the parent's original bootstrap port.
+     *
+     * I wish the Mach bits would have better documentation.
+     */
     pid_t               pid;
     switch (pid = fork ()) {
     case -1:
+        err = mach_port_deallocate (mach_task_self(), parent_recv_port);
+        CHECK_MACH_ERROR (err, "mach_port_deallocate failed:");
         return pid;
-    case 0:
-        if (send_port (mach_task_self ()) != 0)
+    case 0: /* child */
+        err = task_get_bootstrap_port (mach_task_self (), &parent_recv_port);
+        CHECK_MACH_ERROR (err, "task_get_bootstrap_port failed:");
+        if (setup_recv_port (&child_recv_port) != 0)
             return -1;
+        if (send_port (parent_recv_port, mach_task_self ()) != 0)
+            return -1;
+        if (send_port (parent_recv_port, child_recv_port) != 0)
+            return -1;
+        if (recv_port (child_recv_port, &bootstrap_port) != 0)
+            return -1;
+        err = task_set_bootstrap_port (mach_task_self (), bootstrap_port);
+        CHECK_MACH_ERROR (err, "task_set_bootstrap_port failed:");
         break;
-    default:
-        if (recv_port (notify_port, &task) != 0)
+    default: /* parent */
+        err = task_set_bootstrap_port (mach_task_self (), bootstrap_port);
+        CHECK_MACH_ERROR (err, "task_set_bootstrap_port failed:");
+        if (recv_port (parent_recv_port, &task) != 0)
             return -1;
+        if (recv_port (parent_recv_port, &child_recv_port) != 0)
+            return -1;
+        if (send_port (child_recv_port, bootstrap_port) != 0)
+            return -1;
+        err = mach_port_deallocate (mach_task_self(), parent_recv_port);
+        CHECK_MACH_ERROR (err, "mach_port_deallocate failed:");
         break;
     }
 
