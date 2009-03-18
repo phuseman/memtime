@@ -1,0 +1,90 @@
+memtime - track memory and time used by a command
+
+* Introduction
+LTSmin is a toolset for manipulating labelled transition systems. The
+main tool in this release is ltsmin-mpi, which is a distributed
+implementation of signature-based bisimulation reduction for strong
+bisimulation and branching bisimulation. The input for this tool is a
+labelled transition system (LTS) in DIR format.
+
+Various sequential, symbolic and distributed tools are provided for
+the creation of LTSs, for example from muCRL, mCRL2 and PROMELA (via
+NIPS) specifications. Alternatively, LTSs in DIR format can be created
+by third-party tools, for example instantiators and dmp2dir from the
+muCRL toolset.
+
+The tools in this release support compression of DIR files as well as
+putting a DIR in an archive file. The ltsmin-convert utility can
+convert files from one DIR variant to another, and to the BCG file
+format from the CADP toolset.
+
+* Supported Systems
+ - GNU/Linux (tested on Debian, Fedora, OpenSuSE 10.2)
+ - MacOS X, version 10.5 "Leopard"
+ - MacOS X, version 10.4 "Tiger"
+
+* Installation Instructions
+If you are building the software from a Git repository rather than a
+release tarball, refer to Section "Building from a Git Repository" for
+additional set-up instructions.  Then install the dependencies listed
+in Section "Build Dependencies" below.
+
+    # Unpack the tarball
+    $ tar xvzf ltsmin-<version>.tar.gz
+    $ cd ltsmin-<version>
+
+    # Configure
+    $ ./configure --disable-dependency-tracking --prefix /path/
+
+It is a good idea to check the output of ./configure, to see whether
+all dependencies were found.
+
+    # Build
+    $ make
+
+    # Install
+    $ make install
+
+See `./configure --help' for the list of available variables,
+and file INSTALL for further details.
+
+** Additional Build Options
+*** make targets
+The following additional make targets are supported:
+
+    mostlyclean::
+    clean::
+        Clean the source tree.
+
+    doxygen-doc::
+        Builds Doxygen documentation for the source code.
+
+* Building from a Git Repository
+Before building the software as described above, the following commands
+have to be executed in the top-level source directory:
+
+    $ git submodule update --init
+    $ ./memtimereconf
+
+** Dependencies
+Building from another source than the release tarball requires some
+extra tools to be installed:
+
+*** GNU automake
+Download automake (>= 1.10) from
+<http://www.gnu.org/software/automake/>.  We tested with
+automake-1.10.
+
+*** GNU autoconf
+Download autoconf (>= 2.60) from
+<http://www.gnu.org/software/autoconf/>.  We tested with
+autoconf-2.61.
+
+* Contact
+Send questions, bug reports, comments and feature suggestions to
+<michaelw@foldr.org>.  New versions can be found at
+<http://www.foldr.org/~michaelw/projects/memtime/>.
+
+;; Local Variables:
+;; mode: outline
+;; End:
