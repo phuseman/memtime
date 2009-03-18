@@ -48,7 +48,7 @@ AC_OBJEXT
 case "$host_os" in
     linux*) machdep=linux ;;
   solaris*) machdep=sunos5 ;;
-  darwin9*) machdep=darwin9 ;;
+   darwin*) machdep=darwin9 ;;
   *) AC_MSG_ERROR([System "$host_os" is not yet supported.]) ;;
 esac
 
