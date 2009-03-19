@@ -39,7 +39,7 @@
 
 #include "machdep.h"
 
-static task_t       task = MACH_PORT_NULL;
+static task_t       child_task = MACH_PORT_NULL;
 
 #define CHECK_MACH_ERROR(err, msg)                                      \
     if (err != KERN_SUCCESS) {                                          \
@@ -156,7 +156,7 @@ sampling_fork ()
     default: /* parent */
         err = task_set_bootstrap_port (mach_task_self (), bootstrap_port);
         CHECK_MACH_ERROR (err, "task_set_bootstrap_port failed:");
-        if (recv_port (parent_recv_port, &task) != 0)
+        if (recv_port (parent_recv_port, &child_task) != 0)
             return -1;
         if (recv_port (parent_recv_port, &child_recv_port) != 0)
             return -1;
@@ -175,7 +175,7 @@ get_sample (memtime_info_t *info)
 {
     struct task_basic_info ti;
     mach_msg_type_number_t ti_count = TASK_BASIC_INFO_COUNT;
-    task_info (task, TASK_BASIC_INFO, (task_info_t)&ti, &ti_count);
+    task_info (child_task, TASK_BASIC_INFO, (task_info_t)&ti, &ti_count);
 
     info->rss_kb = ti.resident_size / 1024UL;
     unsigned long int      vmsize_bytes = ti.virtual_size;
@@ -193,7 +193,7 @@ get_sample (memtime_info_t *info)
     for (address = 0; ; address += size) {
         /* Get memory region. */
         count = VM_REGION_TOP_INFO_COUNT;
-        if (vm_region (task, &address, &size,
+        if (vm_region (child_task, &address, &size,
                        VM_REGION_TOP_INFO, (vm_region_info_t)&r_info,
                        &count, &object_name) != KERN_SUCCESS) {
             /* No more memory regions. */
@@ -214,7 +214,7 @@ get_sample (memtime_info_t *info)
                 vm_region_basic_info_data_64_t b_info;
 
                 count = VM_REGION_BASIC_INFO_COUNT_64;
-                if (vm_region_64 (task, &address,
+                if (vm_region_64 (child_task, &address,
                                   &size, VM_REGION_BASIC_INFO,
                                   (vm_region_info_t)&b_info, &count,
                                   &object_name) != KERN_SUCCESS) {
