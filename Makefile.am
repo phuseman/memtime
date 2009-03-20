@@ -41,4 +41,5 @@ memtime_SOURCES += sunos5.c
 AM_CPPFLAGS += -DCAN_USE_RLIMIT_RSS -DCAN_USE_RLIMIT_CPU
 endif
 
-doc_DATA = License
+EXTRA_DIST = License
+doc_DATA = License README
