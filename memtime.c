@@ -210,7 +210,13 @@ main (int argc, char *argv[])
 
      if(WIFEXITED(kid_status))
 	  exit(WEXITSTATUS(kid_status));
-     else 
-	  exit(128 + WTERMSIG(kid_status));
+     else {
+          int csig = WTERMSIG(kid_status);
+          switch (csig) {
+          case SIGHUP: case SIGINT: case SIGUSR1: case SIGUSR2:
+          case SIGKILL: case SIGALRM: case SIGTERM: case SIGPIPE:
+               kill (getpid(), csig);
+          }
+          exit (1);
+     }
 }
-
