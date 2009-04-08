@@ -103,7 +103,7 @@ unsigned long get_time()
      return (now.tv_sec * 1000) + (now.tv_usec / 1000);
 }
 
-int set_mem_limit(long int maxbytes)
+int set_mem_limit(unsigned long maxbytes)
 {
 	struct  rlimit rl;
 	rl.rlim_cur=maxbytes; 
