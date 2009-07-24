@@ -215,8 +215,10 @@ main (int argc, char *argv[])
           switch (csig) {
           case SIGHUP: case SIGINT: case SIGUSR1: case SIGUSR2:
           case SIGKILL: case SIGALRM: case SIGTERM: case SIGPIPE:
-               kill (getpid(), csig);
+               raise (csig);
           }
-          exit (1);
+          fprintf (stderr, "%s: child died with signal %d, aborting.\n", 
+                   argv[0], csig);
+          abort ();
      }
 }
