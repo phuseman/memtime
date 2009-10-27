@@ -30,6 +30,7 @@ AC_CONFIG_MACRO_DIR([m4])
 AC_CONFIG_AUX_DIR([autotools])
 AM_INIT_AUTOMAKE([foreign])
 AC_CONFIG_SRCDIR([memtime.c])
+AC_CONFIG_HEADERS([config.h])
 
 AC_CANONICAL_HOST
 
@@ -51,6 +52,25 @@ case "$host_os" in
    darwin*) machdep=darwin9 ;;
   *) AC_MSG_ERROR([System "$host_os" is not yet supported.]) ;;
 esac
+
+AC_CHECK_HEADERS([mach/shared_memory_server.h mach/shared_region.h])
+
+AC_CHECK_DECLS([SHARED_REGION_BASE, SHARED_REGION_SIZE],
+[have_shared_region_syms=yes],,
+[#ifdef HAVE_MACH_SHARED_REGION_H
+#include <mach/shared_region.h>
+#endif
+])dnl
+AC_CHECK_DECLS([GLOBAL_SHARED_TEXT_SEGMENT, GLOBAL_SHARED_DATA_SEGMENT,
+  SHARED_TEXT_REGION_SIZE],
+[have_shared_region_syms=yes],,
+[#ifdef HAVE_MACH_SHARED_MEMORY_SERVER_H
+#include <mach/shared_memory_server.h>
+#endif
+])dnl
+if test x"$have_shared_region_syms" != xyes; then
+  AC_MSG_ERROR([unknown mach/shared_region API])
+fi
 
 AM_CONDITIONAL([LINUX], [test x$machdep = xlinux ])
 AM_CONDITIONAL([SUNOS5], [test x$machdep = xsunos5 ])

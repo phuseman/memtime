@@ -26,6 +26,9 @@
  * @APPLE_LICENSE_HEADER_END@
  */
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
 #include <stdlib.h>
 #include <unistd.h>
 #include <stdio.h>
@@ -35,7 +38,13 @@
 #include <mach/mach.h>
 #include <mach/task.h>
 #include <mach/mach_error.h>
+#if defined(HAVE_MACH_SHARED_REGION_H) && HAVE_DECL_SHARED_REGION_SIZE
+#include <mach/shared_region.h>
+#elif defined(HAVE_MACH_SHARED_MEMORY_SERVER_H)
 #include <mach/shared_memory_server.h>
+#endif
+#include <mach/vm_map.h>
+#include <mach/vm_region.h>
 
 #include "machdep.h"
 
@@ -170,21 +179,40 @@ sampling_fork ()
     return pid;
 }
 
+static int
+in_shared_region (vm_address_t address)
+{
+#if HAVE_DECL_SHARED_REGION_SIZE
+    return (address >= SHARED_REGION_BASE
+            && address < (SHARED_REGION_BASE + SHARED_REGION_SIZE));
+#elif HAVE_DECL_GLOBAL_SHARED_TEXT_SEGMENT
+    return (address >= GLOBAL_SHARED_TEXT_SEGMENT
+            && address < (GLOBAL_SHARED_DATA_SEGMENT
+                          + SHARED_DATA_REGION_SIZE));
+#endif
+}
+
 int
 get_sample (memtime_info_t *info)
 {
-    struct task_basic_info ti;
+    task_basic_info_data_t ti;
+#ifdef _LP64
+#define vm_region vm_region_64
+#endif
     mach_msg_type_number_t ti_count = TASK_BASIC_INFO_COUNT;
-    task_info (child_task, TASK_BASIC_INFO, (task_info_t)&ti, &ti_count);
+    if (task_info (child_task, TASK_BASIC_INFO, (task_info_t)&ti, &ti_count)
+        != KERN_SUCCESS) {
+        return 1;
+    }
 
     info->rss_kb = ti.resident_size / 1024UL;
     unsigned long int      vmsize_bytes = ti.virtual_size;
-#if 1
     vm_address_t           address;
-    vm_size_t              size;
+    vm_size_t              size = 0, empty = 0;
     mach_msg_type_number_t count;
     mach_port_t            object_name;
     vm_region_top_info_data_t r_info;
+    int has_shared_regions = 0;
 
     /*
      * Iterate through the VM regions of the process and determine
@@ -200,9 +228,7 @@ get_sample (memtime_info_t *info)
             break;
         }
 
-        if (address >= GLOBAL_SHARED_TEXT_SEGMENT
-            && address < (GLOBAL_SHARED_DATA_SEGMENT
-                          + SHARED_DATA_REGION_SIZE)) {
+        if (in_shared_region (address)) {
             /* This region is private shared. */
 
             /*
@@ -210,7 +236,7 @@ get_sample (memtime_info_t *info)
              * text and data regions mapped in.  If so, adjust
              * virtual memory size and exit loop.
              */
-            if (r_info.share_mode == SM_EMPTY) {
+            if (!has_shared_regions && r_info.share_mode == SM_EMPTY) {
                 vm_region_basic_info_data_64_t b_info;
 
                 count = VM_REGION_BASIC_INFO_COUNT_64;
@@ -221,20 +247,26 @@ get_sample (memtime_info_t *info)
                     break;
                 }
 
-                if (b_info.reserved) {
-                    vmsize_bytes -=
-                        (SHARED_TEXT_REGION_SIZE +
-                         SHARED_DATA_REGION_SIZE);
-                    break;
-                }
+                if (b_info.reserved)
+                    has_shared_regions = 1;
             }
+            if (r_info.share_mode != SM_PRIVATE)
+                continue;
         }
+
+        if (r_info.share_mode == SM_EMPTY)
+            empty += size;
     }
-#else
-    if (vmsize_bytes > SHARED_TEXT_REGION_SIZE +
-    SHARED_DATA_REGION_SIZE)
-    vmsize_bytes -= SHARED_TEXT_REGION_SIZE + SHARED_DATA_REGION_SIZE;
+
+    if (has_shared_regions) {
+#if HAVE_DECL_SHARED_REGION_SIZE
+        vmsize_bytes -= SHARED_REGION_SIZE;
+#elif HAVE_DECL_SHARED_TEXT_REGION_SIZE
+        vmsize_bytes -= (SHARED_TEXT_REGION_SIZE + SHARED_DATA_REGION_SIZE);
 #endif
+    }
+    vmsize_bytes -= empty;
+
     info->vsize_kb = vmsize_bytes / 1024UL;
 
     info->utime_ms = ti.user_time.seconds * 1000 +
@@ -242,7 +274,7 @@ get_sample (memtime_info_t *info)
     info->stime_ms = ti.system_time.seconds * 1000 +
         ti.system_time.microseconds / 1000;
 
-    return 1;
+    return 0;
 }
 
 unsigned long
