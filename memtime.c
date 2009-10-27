@@ -3,7 +3,7 @@
  *
  * Copyright (c) 2000, Johan Bengtsson
  * Copyright (c) 2009, Michael Weber
- * 
+ *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
  * to deal in the Software without restriction, including without limitation
@@ -49,167 +49,254 @@ usage (FILE *ffile)
               "[-c <maxcpuseconds>] <cmd> [<params>]\n");
 }
 
+static int print_stats;
+static pid_t kid;
+
+static void (*sigint_prev) (int);
+static void
+handle_sigint (int signal)
+{
+     if (kid)
+          kill (kid, signal);
+     if (sigint_prev != NULL && sigint_prev != handle_sigint)
+          sigint_prev (signal);
+}
+
+static void (*sigterm_prev) (int);
+static void
+handle_sigterm (int signal)
+{
+     if (kid)
+          kill (kid, signal);
+     if (sigterm_prev != NULL && sigterm_prev != handle_sigterm)
+          sigterm_prev (signal);
+}
+
+static void (*sighup_prev) (int);
+static void
+handle_sighup (int signal)
+{
+     if (kid)
+          kill (kid, signal);
+     if (sighup_prev != NULL && sighup_prev != handle_sighup)
+          sighup_prev (signal);
+}
+
+static void (*sigusr1_prev) (int);
+static void
+handle_sigusr1 (int signal)
+{
+     if (kid)
+          kill (kid, signal);
+     if (sigusr1_prev != NULL && sigusr1_prev != handle_sigusr1)
+          sigusr1_prev (signal);
+}
+
+static void (*sigusr2_prev) (int);
+static void
+handle_sigusr2 (int signal)
+{
+     if (kid)
+          kill (kid, signal);
+     if (sigusr2_prev != NULL && sigusr2_prev != handle_sigusr2)
+          sigusr2_prev (signal);
+}
+
+static void (*sigprof_prev) (int);
+static void
+handle_sigprof (int signal)
+{
+     print_stats = 1;
+     if (sigprof_prev != NULL && sigprof_prev != handle_sigprof)
+          sigprof_prev (signal);
+}
+
+
 int
 main (int argc, char *argv[])
 {
      struct rusage kid_usage;
-     pid_t  kid;
      int    kid_status;
      int    i, opt, echo_args = 0, exit_flag;
      long int sample_time=0, time = 0;
-	 
-	 unsigned long maxkbytes=0; //kilobytes
-	 unsigned long maxseconds=0; //seconds
-	 long int maxmillis=0;
+
+     unsigned long maxkbytes = 0; // kilobytes
+     unsigned long maxseconds = 0; // seconds
+     long int maxmillis = 0;
 
      unsigned long max_vsize = 0, max_rss = 0;
      unsigned long start, end;
 
      memtime_info_t info;
+     memset (&info, 0, sizeof info);
 
      if (argc < 2) {
-          usage(stderr);          
-	  exit(EXIT_FAILURE);
+          usage(stderr);
+          exit(EXIT_FAILURE);
      }
 
      while ((opt = getopt(argc, argv, "+eht:m:c:")) != -1) {
 
-	  switch (opt) {              
-	  case 'e' : 
-	       echo_args = 1;
-	       break;
+          switch (opt) {
+          case 'e' :
+               echo_args = 1;
+               break;
 
-	  case 't' :
-	       errno = 0;
-	       sample_time = strtol(optarg, NULL, 0);
-	       if (errno) {
-		    perror("Illegal argument to t option");
-		    exit(EXIT_FAILURE);
-	       }
-	       break;
-	  case 'm' : 
-	       errno = 0;
-	       maxkbytes = atol(optarg);
-	       if (errno) {
-		    perror("Illegal argument to m option");
-		    exit(EXIT_FAILURE);
-	       }
-	       break;
+          case 't' :
+               errno = 0;
+               sample_time = strtol(optarg, NULL, 0);
+               if (errno) {
+                    perror("Illegal argument to t option");
+                    exit(EXIT_FAILURE);
+               }
+               break;
+          case 'm' :
+               errno = 0;
+               maxkbytes = atol(optarg);
+               if (errno) {
+                    perror("Illegal argument to m option");
+                    exit(EXIT_FAILURE);
+               }
+               break;
 
-	  case 'c' : 
-	       errno = 0;
-	       maxseconds = atol(optarg);
-	       if (errno) {
-		    perror("Illegal argument to c option");
-		    exit(EXIT_FAILURE);
-	       }
-		   maxmillis=1000*maxseconds;
-	       break;
+          case 'c' :
+               errno = 0;
+               maxseconds = atol(optarg);
+               if (errno) {
+                    perror("Illegal argument to c option");
+                    exit(EXIT_FAILURE);
+               }
+               maxmillis=1000*maxseconds;
+               break;
           case 'h':
                usage (stdout);
                exit(EXIT_SUCCESS);
 
           default:
                exit(EXIT_FAILURE);
-	  }
+          }
      }
 
      if (echo_args) {
-	  fprintf(stderr,"Command line: ");
-	  for (i = optind; i < argc; i++)
-	       fprintf(stderr,"%s ", argv[i]);
-	  fprintf(stderr,"\n");
+          fprintf(stderr,"Command line: ");
+          for (i = optind; i < argc; i++)
+               fprintf(stderr,"%s ", argv[i]);
+          fprintf(stderr,"\n");
      }
 
      start = get_time();
-    
+
      switch (kid = sampling_fork()) {
-	
      case -1 :
-	  perror("sampling_fork failed");
-	  exit(EXIT_FAILURE);
-	
-     case 0 :	
-#if defined(CAN_USE_RLIMIT_RSS)	  
-	  if (maxkbytes>0) {
-	       set_mem_limit((long int)maxkbytes*1024);
-	  }
+          perror("sampling_fork failed");
+          exit(EXIT_FAILURE);
+
+     case 0 :
+#if defined(CAN_USE_RLIMIT_RSS)
+          if (maxkbytes>0) {
+               set_mem_limit((long int)maxkbytes*1024);
+          }
 #endif
-#if defined(CAN_USE_RLIMIT_CPU)	  
-	  if (maxseconds>0) {
-	       set_cpu_limit((long int)maxseconds);
-	  }
+#if defined(CAN_USE_RLIMIT_CPU)
+          if (maxseconds>0) {
+               set_cpu_limit((long int)maxseconds);
+          }
 #endif
-	  execvp(argv[optind], &(argv[optind]));
-	  perror("exec failed");
-	  exit(EXIT_FAILURE);
-	
+          execvp(argv[optind], &(argv[optind]));
+          perror("exec failed");
+          exit(EXIT_FAILURE);
+
      default :
-	  break;
+          break;
      }
 
+     sigint_prev  = signal (SIGINT,  handle_sigint);
+     sigterm_prev = signal (SIGTERM, handle_sigterm);
+     sighup_prev  = signal (SIGHUP,  handle_sighup);
+     sigusr1_prev = signal (SIGUSR1, handle_sigusr1);
+     sigusr2_prev = signal (SIGUSR2, handle_sigusr2);
+     sigprof_prev = signal (SIGPROF, handle_sigprof);
+
      do {
+          get_sample(&info);
 
-	  get_sample(&info);
+          max_vsize = (info.vsize_kb > max_vsize ? info.vsize_kb : max_vsize);
+          max_rss = (info.rss_kb > max_rss ? info.rss_kb : max_rss);
 
-	  max_vsize = (info.vsize_kb > max_vsize ? info.vsize_kb : max_vsize);
-	  max_rss = (info.rss_kb > max_rss ? info.rss_kb : max_rss);
-	  
-	  if (sample_time) {
-	       time++;
-	       if (time == 10 * sample_time) {
-		    end = get_time();
-		    
-		    fprintf(stderr,"%.2f user, %.2f system, %.2f elapsed"
-			    " -- VSize = %luKB, RSS = %luKB\n",
-			    (double)info.utime_ms/1000.0,
-			    (double)info.stime_ms/1000.0,
-			    (double)(end - start)/1000.0,
-			    info.vsize_kb, info.rss_kb);
-		    fflush(stdout);
-		    
-		    time = 1;
-	       }
-	  }
+          if (sample_time) {
+               time++;
+               if (time >= 10 * sample_time) {
+                    time = 0;
+                    print_stats = 1;
+               }
+          }
 
-	  usleep(100000);
+          if (print_stats) {
+               end = get_time();
 
-	  exit_flag = ((wait4(kid, &kid_status, WNOHANG, &kid_usage) == kid)
-		       && (WIFEXITED(kid_status) || WIFSIGNALED(kid_status)));
-#if !defined(CAN_USE_RLIMIT_RSS)	  
-	  if ((maxkbytes>0) && (max_vsize>maxkbytes)) {
-	  	kill(kid,SIGKILL);
-	  }
+               fprintf(stderr,"%.2f user, %.2f system, %.2f elapsed"
+                       " -- VSize = %luKB, RSS = %luKB\n",
+                       (double)info.utime_ms/1000.0,
+                       (double)info.stime_ms/1000.0,
+                       (double)(end - start)/1000.0,
+                       info.vsize_kb, info.rss_kb);
+               fflush(stdout);
+               print_stats = 0;               
+          }
+
+          usleep(100000);
+
+          int wait_for = wait4(kid, &kid_status, WNOHANG, &kid_usage);
+          if (wait_for == -1 && errno != EINTR) {
+               perror ("wait4");
+               abort ();
+          }
+          exit_flag = (wait_for == kid
+                       && (WIFEXITED(kid_status) || WIFSIGNALED(kid_status)));
+
+#if !defined(CAN_USE_RLIMIT_RSS)
+          if ((maxkbytes>0) && (max_vsize>maxkbytes)) {
+               kill(kid,SIGKILL);
+          }
 #endif
-#if !defined(CAN_USE_RLIMIT_CPU)	  
-	  if ((maxmillis>0) && (info.utime_ms>maxmillis)) {
-	  	kill(kid,SIGKILL);
-	  }
-#endif	  
+#if !defined(CAN_USE_RLIMIT_CPU)
+          if ((maxmillis>0) && (info.utime_ms>maxmillis)) {
+               kill(kid,SIGKILL);
+          }
+#endif
      } while (!exit_flag);
-     
+
      end = get_time();
-     
+
+     signal (SIGINT,  sigint_prev);
+     signal (SIGTERM, sigterm_prev);
+     signal (SIGHUP,  sighup_prev);
+     signal (SIGUSR1, sigusr1_prev);
+     signal (SIGUSR2, sigusr2_prev);
+     signal (SIGPROF, sigprof_prev);
+
      if (WIFEXITED(kid_status)) {
-	  fprintf(stderr, "Exit [%d]\n", WEXITSTATUS(kid_status));
+          fprintf(stderr, "Exit [%d]\n", WEXITSTATUS(kid_status));
      } else {
-	  fprintf(stderr, "Killed [%d]\n", WTERMSIG(kid_status));
+          fprintf(stderr, "Killed [%d]\n", WTERMSIG(kid_status));
      }
 
      {
-	  double kid_utime = ((double)kid_usage.ru_utime.tv_sec 
-			      + (double)kid_usage.ru_utime.tv_usec / 1E6);
-	  double kid_stime = ((double)kid_usage.ru_stime.tv_sec 
-			      + (double)kid_usage.ru_stime.tv_usec / 1E6);
+          max_vsize = (info.vsize_kb > max_vsize ? info.vsize_kb : max_vsize);
+          max_rss = (info.rss_kb > max_rss ? info.rss_kb : max_rss);
+          double kid_utime = ((double)kid_usage.ru_utime.tv_sec
+                              + (double)kid_usage.ru_utime.tv_usec / 1E6);
+          double kid_stime = ((double)kid_usage.ru_stime.tv_sec
+                              + (double)kid_usage.ru_stime.tv_usec / 1E6);
 
-	  fprintf(stderr, "%.2f user, %.2f system, %.2f elapsed -- "
-		  "Max VSize = %luKB, Max RSS = %luKB\n", 
-		  kid_utime, kid_stime, (double)(end - start) / 1000.0,
-		  max_vsize, max_rss);
+          fprintf(stderr, "%.2f user, %.2f system, %.2f elapsed -- "
+                  "Max VSize = %luKB, Max RSS = %luKB\n",
+                  kid_utime, kid_stime, (double)(end - start) / 1000.0,
+                  max_vsize, max_rss);
      }
 
      if(WIFEXITED(kid_status))
-	  exit(WEXITSTATUS(kid_status));
+          exit(WEXITSTATUS(kid_status));
      else {
           int csig = WTERMSIG(kid_status);
           switch (csig) {
@@ -217,7 +304,7 @@ main (int argc, char *argv[])
           case SIGKILL: case SIGALRM: case SIGTERM: case SIGPIPE:
                raise (csig);
           }
-          fprintf (stderr, "%s: child died with signal %d, aborting.\n", 
+          fprintf (stderr, "%s: child died with signal %d, aborting.\n",
                    argv[0], csig);
           abort ();
      }
