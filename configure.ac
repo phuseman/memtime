@@ -68,7 +68,8 @@ AC_CHECK_DECLS([GLOBAL_SHARED_TEXT_SEGMENT, GLOBAL_SHARED_DATA_SEGMENT,
 #include <mach/shared_memory_server.h>
 #endif
 ])dnl
-if test x"$have_shared_region_syms" != xyes; then
+if test x"$have_shared_region_syms" != xyes dnl
+   && test "$machdep" = "darwin9"; then
   AC_MSG_ERROR([unknown mach/shared_region API])
 fi
 
