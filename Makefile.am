@@ -40,6 +40,16 @@ if SUNOS5
 memtime_SOURCES += sunos5.c
 AM_CPPFLAGS += -DCAN_USE_RLIMIT_RSS -DCAN_USE_RLIMIT_CPU
 endif
+if OPENBSD
+memtime_SOURCES += netbsd.c
+memtime_LDADD = -lkvm
+AM_CPPFLAGS += -DCAN_USE_RLIMIT_CPU
+endif
+if NETBSD
+memtime_SOURCES += netbsd.c
+memtime_LDADD = -lkvm
+AM_CPPFLAGS += -DCAN_USE_RLIMIT_RSS -DCAN_USE_RLIMIT_CPU
+endif
 
 EXTRA_DIST = License
 doc_DATA = License README
