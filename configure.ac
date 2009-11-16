@@ -51,6 +51,7 @@ case "$host_os" in
   solaris*) machdep=sunos5 ;;
    darwin*) machdep=darwin9 ;;
   openbsd*) machdep=openbsd ;;
+dragonfly*) machdep=dragonfly ;;
    netbsd*) machdep=netbsd ;;
   *) AC_MSG_ERROR([System "$host_os" is not yet supported.]) ;;
 esac
@@ -80,6 +81,7 @@ AM_CONDITIONAL([SUNOS5], [test x$machdep = xsunos5 ])
 AM_CONDITIONAL([DARWIN9], [test x$machdep = xdarwin9 ])
 AM_CONDITIONAL([OPENBSD], [test x$machdep = xopenbsd ])
 AM_CONDITIONAL([NETBSD], [test x$machdep = xnetbsd ])
+AM_CONDITIONAL([DRAGONFLY], [test x$machdep = xdragonfly ])
 
 AC_CONFIG_FILES([Makefile])
 AC_OUTPUT

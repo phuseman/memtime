@@ -45,6 +45,11 @@ memtime_SOURCES += netbsd.c
 memtime_LDADD = -lkvm
 AM_CPPFLAGS += -DCAN_USE_RLIMIT_CPU
 endif
+if DRAGONFLY
+memtime_SOURCES += dragonfly.c
+memtime_LDADD = -lkvm
+AM_CPPFLAGS += -DCAN_USE_RLIMIT_RSS -DCAN_USE_RLIMIT_CPU
+endif
 if NETBSD
 memtime_SOURCES += netbsd.c
 memtime_LDADD = -lkvm
