@@ -56,6 +56,9 @@ static task_t       child_task = MACH_PORT_NULL;
         return -1;                                                      \
     }                                                                   \
 
+#ifdef _LP64
+#define vm_region vm_region_64
+#endif
 
 static int
 setup_recv_port (mach_port_t *recv_port)
@@ -180,6 +183,52 @@ sampling_fork ()
 }
 
 static int
+get_timeinfo (memtime_info_t *info, task_t task, struct task_basic_info *ti)
+{
+    /* calculate CPU times, adapted from top/libtop.c */
+
+    kern_return_t err;
+    thread_array_t thread_table;
+    unsigned int table_size, i;
+    thread_basic_info_t thi;
+    thread_basic_info_data_t thi_data;
+
+    unsigned long utime_ms = ti->user_time.seconds * 1000
+	  + ti->user_time.microseconds / 1000;
+    unsigned long stime_ms = ti->system_time.seconds * 1000
+	  + ti->system_time.microseconds / 1000;
+
+    err = task_threads(task, &thread_table, &table_size);
+    CHECK_MACH_ERROR(err, "task_threads failed:");
+    thi = &thi_data;
+
+    for (i = 0; i != table_size; ++i) {
+	  mach_msg_type_number_t count = THREAD_BASIC_INFO_COUNT;
+
+	  err = thread_info(thread_table[i], THREAD_BASIC_INFO,
+			      (thread_info_t)thi, &count);
+	  CHECK_MACH_ERROR(err, "thread_info failed:");
+	  if ((thi->flags & TH_FLAGS_IDLE) == 0) {
+	       utime_ms += thi->user_time.seconds * 1000
+		    + thi->user_time.microseconds / 1000;
+	       stime_ms += thi->system_time.seconds * 1000
+		    + thi->system_time.microseconds / 1000;
+	  }
+	  if (task != mach_task_self()) {
+	       err = mach_port_deallocate(mach_task_self(), thread_table[i]);
+	       CHECK_MACH_ERROR(err, "mach_port_deallocate failed:");
+	  }
+    }
+    err = vm_deallocate(mach_task_self(), (vm_offset_t)thread_table,
+                          table_size * sizeof(thread_array_t));
+    CHECK_MACH_ERROR(err, "vm_deallocate failed:");
+
+    info->utime_ms = utime_ms;
+    info->stime_ms = stime_ms;
+    return 0;
+}
+
+static int
 in_shared_region (vm_address_t address)
 {
 #if HAVE_DECL_SHARED_REGION_SIZE
@@ -192,21 +241,11 @@ in_shared_region (vm_address_t address)
 #endif
 }
 
-int
-get_sample (memtime_info_t *info)
+static int
+get_meminfo (memtime_info_t *info, task_t task, struct task_basic_info *ti)
 {
-    task_basic_info_data_t ti;
-#ifdef _LP64
-#define vm_region vm_region_64
-#endif
-    mach_msg_type_number_t ti_count = TASK_BASIC_INFO_COUNT;
-    if (task_info (child_task, TASK_BASIC_INFO, (task_info_t)&ti, &ti_count)
-        != KERN_SUCCESS) {
-        return 1;
-    }
-
-    info->rss_kb = ti.resident_size / 1024UL;
-    unsigned long int      vmsize_bytes = ti.virtual_size;
+    info->rss_kb = ti->resident_size / 1024UL;
+    unsigned long int      vmsize_bytes = ti->virtual_size;
     vm_address_t           address;
     vm_size_t              size = 0, empty = 0;
     mach_msg_type_number_t count;
@@ -221,7 +260,7 @@ get_sample (memtime_info_t *info)
     for (address = 0; ; address += size) {
         /* Get memory region. */
         count = VM_REGION_TOP_INFO_COUNT;
-        if (vm_region (child_task, &address, &size,
+        if (vm_region (task, &address, &size,
                        VM_REGION_TOP_INFO, (vm_region_info_t)&r_info,
                        &count, &object_name) != KERN_SUCCESS) {
             /* No more memory regions. */
@@ -240,7 +279,7 @@ get_sample (memtime_info_t *info)
                 vm_region_basic_info_data_64_t b_info;
 
                 count = VM_REGION_BASIC_INFO_COUNT_64;
-                if (vm_region_64 (child_task, &address,
+                if (vm_region_64 (task, &address,
                                   &size, VM_REGION_BASIC_INFO,
                                   (vm_region_info_t)&b_info, &count,
                                   &object_name) != KERN_SUCCESS) {
@@ -268,13 +307,24 @@ get_sample (memtime_info_t *info)
     vmsize_bytes -= empty;
 
     info->vsize_kb = vmsize_bytes / 1024UL;
-
-    info->utime_ms = ti.user_time.seconds * 1000 +
-        ti.user_time.microseconds / 1000;
-    info->stime_ms = ti.system_time.seconds * 1000 +
-        ti.system_time.microseconds / 1000;
-
     return 0;
+}
+
+
+int
+get_sample (memtime_info_t *info)
+{
+    task_basic_info_data_t ti;
+    mach_msg_type_number_t ti_count = TASK_BASIC_INFO_COUNT;
+    if (task_info (child_task, TASK_BASIC_INFO, (task_info_t)&ti, &ti_count)
+        != KERN_SUCCESS) {
+        return 1;
+    }
+
+    int rc = 0;
+    if (get_meminfo (info, child_task, &ti) != 0) rc = -1;
+    if (get_timeinfo (info, child_task, &ti) != 0) rc = -1;
+    return rc;
 }
 
 unsigned long
