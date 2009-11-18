@@ -55,6 +55,11 @@ memtime_SOURCES += netbsd.c
 memtime_LDADD = -lkvm
 AM_CPPFLAGS += -DCAN_USE_RLIMIT_RSS -DCAN_USE_RLIMIT_CPU
 endif
+if FREEBSD
+memtime_SOURCES += freebsd.c
+memtime_LDADD = -lkvm
+AM_CPPFLAGS += -DCAN_USE_RLIMIT_RSS -DCAN_USE_RLIMIT_CPU
+endif
 
 EXTRA_DIST = License
 doc_DATA = License README
