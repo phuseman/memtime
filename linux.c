@@ -37,7 +37,8 @@
 #include "machdep.h"
 
 static int proc_fd = -1;
-
+static long pagesize;
+static long clock_ticks;
 
 pid_t
 sampling_fork()
@@ -49,6 +50,8 @@ sampling_fork()
      case 0:
           return pid;
      default:
+          clock_ticks = sysconf(_SC_CLK_TCK);
+          pagesize = getpagesize();
           snprintf(filename, sizeof filename, "/proc/%d/stat", (int)pid);
           proc_fd = open(filename, O_RDONLY);
           return (proc_fd != -1) ? pid : -1;
@@ -71,20 +74,23 @@ int get_sample(memtime_info_t *info)
 
      *(buffer + rc) = '\0';
 
-     for (i=0, tmp=buffer; i < 13; i++)
-	  tmp = strchr(tmp + 1, ' ');
+     tmp = strchr(buffer, ')');
+     tmp += 2;
+
+     for (i = 0; i < 11; i++)
+          tmp = strchr(tmp + 1, ' ');
 
      sscanf(tmp + 1, "%lu %lu", &utime, &stime);
-    
-     for (/* empty */; i < 22; i++)
+
+     for (/* empty */; i < 20; i++)
 	  tmp = strchr(tmp + 1, ' ');
 
      sscanf(tmp + 1, "%lu %lu", &vsize, &rss);
 
-     info->utime_ms = utime * (1000 / CLOCKS_PER_SEC);
-     info->stime_ms = stime * (1000 / CLOCKS_PER_SEC);
+     info->utime_ms = utime * (1000 / clock_ticks);
+     info->stime_ms = stime * (1000 / clock_ticks);
 
-     info->rss_kb = (rss * getpagesize()) / 1024;
+     info->rss_kb = (rss * pagesize) / 1024;
      info->vsize_kb = vsize / 1024;
 
      return 1;
