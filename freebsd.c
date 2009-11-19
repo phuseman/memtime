@@ -66,8 +66,10 @@ int get_sample(memtime_info_t *info)
      if (kinfo == NULL || count != 1)
 	  return 0;
 
-     info->utime_ms = kinfo->ki_runtime / 1000;
-     info->stime_ms = 0; // Cannot get system time
+     info->utime_ms = (kinfo->ki_rusage.ru_utime.tv_sec * 1000)
+	  + (kinfo->ki_rusage.ru_utime.tv_usec / 1000);
+     info->stime_ms = (kinfo->ki_rusage.ru_stime.tv_sec * 1000)
+	  + (kinfo->ki_rusage.ru_stime.tv_usec / 1000);
 
      info->vsize_kb = kinfo->ki_size / 1024;
      info->rss_kb = (kinfo->ki_rssize * pagesize) / 1024;
