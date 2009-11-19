@@ -50,6 +50,7 @@ case "$host_os" in
 dragonfly*) machdep=dragonfly ;;
    netbsd*) machdep=netbsd ;;
   freebsd*) machdep=freebsd ;;
+    minix*) machdep=minix ;;
   *) AC_MSG_ERROR([System "$host_os" is not yet supported.]) ;;
 esac
 
@@ -80,6 +81,7 @@ AM_CONDITIONAL([OPENBSD], [test x$machdep = xopenbsd ])
 AM_CONDITIONAL([NETBSD], [test x$machdep = xnetbsd ])
 AM_CONDITIONAL([DRAGONFLY], [test x$machdep = xdragonfly ])
 AM_CONDITIONAL([FREEBSD], [test x$machdep = xfreebsd ])
+AM_CONDITIONAL([MINIX], [test x$machdep = xminix ])
 
 AC_CONFIG_FILES([Makefile])
 AC_OUTPUT

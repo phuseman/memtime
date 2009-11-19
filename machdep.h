@@ -26,6 +26,18 @@
 #define MACHDEP_H
 
 #include <unistd.h>
+#ifdef __minix
+#include <sys/time.h>
+#include <sys/times.h>
+#include <sys/types.h>
+
+struct rusage {
+     struct timeval ru_utime;
+     struct timeval ru_stime;
+};
+
+pid_t wait4(pid_t pid, int *status, int options, struct rusage *rusage);
+#endif
 
 typedef struct {
      unsigned long utime_ms;
@@ -39,6 +51,5 @@ int get_sample(memtime_info_t *info);
 unsigned long get_time();
 int set_mem_limit(unsigned long maxbytes);
 int set_cpu_limit(unsigned long maxseconds);
-
 
 #endif /* MACHDEP_H */
