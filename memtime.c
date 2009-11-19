@@ -192,7 +192,7 @@ main (int argc, char *argv[])
           exit(EXIT_FAILURE);
 
      case 0 :
-#if defined(CAN_USE_RLIMIT_RSS)
+#if defined(CAN_USE_RLIMIT_VSIZE)
           if (maxkbytes>0) {
                set_mem_limit((long int)maxkbytes*1024);
           }
@@ -254,7 +254,7 @@ main (int argc, char *argv[])
           exit_flag = (wait_for == kid
                        && (WIFEXITED(kid_status) || WIFSIGNALED(kid_status)));
 
-#if !defined(CAN_USE_RLIMIT_RSS)
+#if !defined(CAN_USE_RLIMIT_VSIZE)
           if ((maxkbytes>0) && (max_vsize>maxkbytes)) {
                kill(kid,SIGKILL);
           }
