@@ -44,7 +44,7 @@ pid_t sampling_fork()
      switch (pid) {
      case -1:
      case 0:
-          return 0;
+          return pid;
      default:
 	  pagesize = sysconf(_SC_PAGESIZE);
 	  kd = kvm_openfiles(NULL, NULL, NULL, KVM_NO_FILES, NULL);

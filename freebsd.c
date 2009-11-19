@@ -48,7 +48,7 @@ pid_t sampling_fork()
      switch (pid) {
      case -1:
      case 0:
-          return 0;
+          return pid;
      default:
 	  pagesize = getpagesize();
 	  kd = kvm_openfiles(_PATH_DEVNULL, _PATH_DEVNULL, NULL, O_RDONLY,
