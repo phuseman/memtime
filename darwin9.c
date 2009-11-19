@@ -342,16 +342,6 @@ get_time ()
 }
 
 int
-set_mem_limit (unsigned long maxbytes)
-{
-    struct rlimit       rl;
-    long int            softlimit = (long int)maxbytes * 95 / 100;
-    rl.rlim_cur = softlimit;
-    rl.rlim_max = maxbytes;
-    return setrlimit (RLIMIT_RSS, &rl);
-}
-
-int
 set_cpu_limit (unsigned long maxseconds)
 {
     struct rlimit       rl;
