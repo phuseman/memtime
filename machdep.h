@@ -38,7 +38,7 @@ pid_t sampling_fork();
 int get_sample(memtime_info_t *info);
 unsigned long get_time();
 int set_mem_limit(unsigned long maxbytes);
-int set_cpu_limit(long int maxseconds);
+int set_cpu_limit(unsigned long maxseconds);
 
 
 #endif /* MACHDEP_H */

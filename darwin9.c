@@ -352,7 +352,7 @@ set_mem_limit (unsigned long maxbytes)
 }
 
 int
-set_cpu_limit (long int maxseconds)
+set_cpu_limit (unsigned long maxseconds)
 {
     struct rlimit       rl;
     rl.rlim_cur = maxseconds;

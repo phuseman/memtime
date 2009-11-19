@@ -99,7 +99,7 @@ int set_mem_limit(unsigned long maxbytes)
      return setrlimit(RLIMIT_AS,&rl);
 }
 
-int set_cpu_limit(long int maxseconds)
+int set_cpu_limit(unsigned long maxseconds)
 {
      struct  rlimit rl;
 

@@ -122,7 +122,7 @@ main (int argc, char *argv[])
 
      unsigned long maxkbytes = 0; // kilobytes
      unsigned long maxseconds = 0; // seconds
-     long int maxmillis = 0;
+     unsigned long maxmillis = 0;
 
      unsigned long max_vsize = 0, max_rss = 0;
      unsigned long start, end;
