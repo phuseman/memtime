@@ -52,6 +52,7 @@ usage (FILE *ffile)
 
 static int print_stats;
 static pid_t kid;
+int kid_signalled = 0;
 
 static int
 xkill (pid_t kid, int signal)
@@ -59,6 +60,7 @@ xkill (pid_t kid, int signal)
      int rc = -1;
      if (kid != 0) {
           rc = kill (kid, signal);
+          kid_signalled = 1;
      }
      return rc;
 }
