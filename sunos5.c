@@ -54,7 +54,7 @@ sampling_fork()
 
           snprintf(filename, sizeof filename, "/proc/%d/status", (int)pid);
           pstatus_fd = open(filename, O_RDONLY | O_RSYNC);
-          return (psinfo_fd != -1 && pstatus_fd != -1) ? pid : -1;
+          return (psinfo_fd != -1) ? pid : -1;
      }
 
 }
@@ -67,23 +67,25 @@ int get_sample(memtime_info_t *info)
 
      rc = pread(psinfo_fd, &pinfo, sizeof(struct psinfo), 0);
 
-     if (rc == -1) {
+     if (rc == -1)
 	  return 0;
-     }
 
-     rc = pread(pstatus_fd, &sinfo, sizeof(struct pstatus), 0);
+     if (pstatus_fd != -1) {
+         rc = pread(pstatus_fd, &sinfo, sizeof(struct pstatus), 0);
 
-     if (rc == -1) {
-	  return 0;
+         if (rc == -1)
+              return 0;
      }
 
      info->rss_kb = pinfo.pr_rssize;
      info->vsize_kb = pinfo.pr_size;
 
-     info->utime_ms = ((1000 * sinfo.pr_utime.tv_sec) 
-		       + (sinfo.pr_utime.tv_nsec / 1000000));
-     info->stime_ms = ((1000 * sinfo.pr_stime.tv_sec) 
-		       + (sinfo.pr_stime.tv_nsec / 1000000));
+     if (pstatus_fd != -1) {
+	  info->utime_ms = ((1000 * sinfo.pr_utime.tv_sec)
+			    + (sinfo.pr_utime.tv_nsec / 1000000));
+	  info->stime_ms = ((1000 * sinfo.pr_stime.tv_sec)
+			    + (sinfo.pr_stime.tv_nsec / 1000000));
+     }
 
      return 1;
 }
