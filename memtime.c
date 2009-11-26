@@ -42,11 +42,11 @@
 #include "machdep.h"
 
 void
-usage (FILE *ffile)
+usage (FILE *ffile, const char *progname)
 {
      fprintf (ffile,
-              "Usage:\nmemtime [-t <interval>] [-e] [-m <maxkilobytes>] "
-              "[-c <maxcpuseconds>] <cmd> [<params>]\n");
+              "Usage:\n%s [-t <interval>] [-e] [-m <maxkilobytes>] "
+              "[-c <maxcpuseconds>] <cmd> [<params>]\n", progname);
 }
 
 static int print_stats;
@@ -118,8 +118,9 @@ main (int argc, char *argv[])
      struct rusage kid_usage;
      int    kid_status;
      int    i, opt, echo_args = 0, exit_flag;
-     long int sample_time=0, time = 0;
+     char   *endptr;
 
+     unsigned long sample_time = 0, time = 0;
      unsigned long maxkbytes = 0; // kilobytes
      unsigned long maxseconds = 0; // seconds
      unsigned long maxmillis = 0;
@@ -131,7 +132,7 @@ main (int argc, char *argv[])
      memset (&info, 0, sizeof info);
 
      if (argc < 2) {
-          usage(stderr);
+          usage(stderr, argv[0]);
           exit(EXIT_FAILURE);
      }
 
@@ -144,37 +145,51 @@ main (int argc, char *argv[])
 
           case 't' :
                errno = 0;
-               sample_time = strtol(optarg, NULL, 0);
+               sample_time = strtoul(optarg, &endptr, 10);
                if (errno) {
                     perror("Illegal argument to t option");
+                    exit(EXIT_FAILURE);
+               } else if (endptr == optarg || *endptr != '\0') {
+                    fprintf(stderr, "Illegal argument to t option\n");
                     exit(EXIT_FAILURE);
                }
                break;
           case 'm' :
                errno = 0;
-               maxkbytes = atol(optarg);
+               maxkbytes =  strtoul(optarg, &endptr, 10);
                if (errno) {
                     perror("Illegal argument to m option");
+                    exit(EXIT_FAILURE);
+               } else if (endptr == optarg || *endptr != '\0') {
+                    fprintf(stderr, "Illegal argument to m option\n");
                     exit(EXIT_FAILURE);
                }
                break;
 
           case 'c' :
                errno = 0;
-               maxseconds = atol(optarg);
+               maxseconds = strtoul(optarg, &endptr, 10);
                if (errno) {
                     perror("Illegal argument to c option");
                     exit(EXIT_FAILURE);
+               } else if (endptr == optarg || *endptr != '\0') {
+                    fprintf(stderr, "Illegal argument to c option\n");
+                    exit(EXIT_FAILURE);
                }
-               maxmillis=1000*maxseconds;
+               maxmillis = 1000*maxseconds;
                break;
           case 'h':
-               usage (stdout);
+               usage (stdout, argv[0]);
                exit(EXIT_SUCCESS);
 
           default:
                exit(EXIT_FAILURE);
           }
+     }
+
+     if (optind == argc) {
+	  fprintf(stderr, "Missing command\n");
+	  exit(EXIT_FAILURE);
      }
 
      if (echo_args) {
@@ -194,12 +209,12 @@ main (int argc, char *argv[])
      case 0 :
 #if defined(CAN_USE_RLIMIT_VSIZE)
           if (maxkbytes>0) {
-               set_mem_limit((long int)maxkbytes*1024);
+               set_mem_limit(maxkbytes*1024);
           }
 #endif
 #if defined(CAN_USE_RLIMIT_CPU)
           if (maxseconds>0) {
-               set_cpu_limit((long int)maxseconds);
+               set_cpu_limit(maxseconds);
           }
 #endif
           execvp(argv[optind], &(argv[optind]));
