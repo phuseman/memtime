@@ -50,11 +50,15 @@
 
 static task_t       child_task = MACH_PORT_NULL;
 
+extern int kid_signalled;
+
 #define CHECK_MACH_ERROR(err, msg)                                      \
-    if (err != KERN_SUCCESS) {                                          \
-        mach_error (msg, err);                                          \
-        return -1;                                                      \
-    }                                                                   \
+    do {                                                                \
+        if (err != KERN_SUCCESS) {                                      \
+            if (kid_signalled == 0) mach_error (msg, err);              \
+            return -1;                                                  \
+        }                                                               \
+    } while (0)                                                         \
 
 #ifdef _LP64
 #define vm_region vm_region_64
