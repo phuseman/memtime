@@ -38,6 +38,7 @@
 #include <signal.h>
 
 #include <errno.h>
+#include <assert.h>
 
 #include "machdep.h"
 
@@ -52,54 +53,36 @@ usage (FILE *ffile, const char *progname)
 static int print_stats;
 static pid_t kid;
 
-static void (*sigint_prev) (int);
-static void
-handle_sigint (int signal)
+static int
+xkill (pid_t kid, int signal)
 {
-     if (kid)
-          kill (kid, signal);
-     if (sigint_prev != NULL && sigint_prev != handle_sigint)
-          sigint_prev (signal);
+     int rc = -1;
+     if (kid != 0) {
+          rc = kill (kid, signal);
+     }
+     return rc;
 }
 
-static void (*sigterm_prev) (int);
-static void
-handle_sigterm (int signal)
-{
-     if (kid)
-          kill (kid, signal);
-     if (sigterm_prev != NULL && sigterm_prev != handle_sigterm)
-          sigterm_prev (signal);
-}
+static const int MAX_SIGNAL = 64;       /* works for most OSes */
+static void (*signal_prev[64]) (int);
+static int caught_signals[] = {
+     SIGINT, SIGTERM, SIGHUP, SIGUSR1, SIGUSR2,
+#ifdef SIGXCPU
+     SIGXCPU,
+#endif
+#ifdef SIGXFSZ
+     SIGXFSZ,
+#endif
+     0
+};
 
-static void (*sighup_prev) (int);
 static void
-handle_sighup (int signal)
+fwd_signal (int signal)
 {
-     if (kid)
-          kill (kid, signal);
-     if (sighup_prev != NULL && sighup_prev != handle_sighup)
-          sighup_prev (signal);
-}
-
-static void (*sigusr1_prev) (int);
-static void
-handle_sigusr1 (int signal)
-{
-     if (kid)
-          kill (kid, signal);
-     if (sigusr1_prev != NULL && sigusr1_prev != handle_sigusr1)
-          sigusr1_prev (signal);
-}
-
-static void (*sigusr2_prev) (int);
-static void
-handle_sigusr2 (int signal)
-{
-     if (kid)
-          kill (kid, signal);
-     if (sigusr2_prev != NULL && sigusr2_prev != handle_sigusr2)
-          sigusr2_prev (signal);
+     xkill (kid, signal);
+     assert (signal < MAX_SIGNAL);
+     if (signal_prev[signal] != NULL && signal_prev[signal] != fwd_signal)
+          signal_prev[signal] (signal);
 }
 
 static void (*sigprof_prev) (int);
@@ -225,11 +208,11 @@ main (int argc, char *argv[])
           break;
      }
 
-     sigint_prev  = signal (SIGINT,  handle_sigint);
-     sigterm_prev = signal (SIGTERM, handle_sigterm);
-     sighup_prev  = signal (SIGHUP,  handle_sighup);
-     sigusr1_prev = signal (SIGUSR1, handle_sigusr1);
-     sigusr2_prev = signal (SIGUSR2, handle_sigusr2);
+     for (i = 0; caught_signals[i] != 0; ++i) {
+          assert (caught_signals[i] < MAX_SIGNAL);
+          signal_prev[caught_signals[i]] =
+               signal (caught_signals[i], fwd_signal);
+     }
      sigprof_prev = signal (SIGPROF, handle_sigprof);
 
      do {
@@ -271,23 +254,20 @@ main (int argc, char *argv[])
 
 #if !defined(CAN_USE_RLIMIT_VSIZE)
           if ((maxkbytes>0) && (max_vsize>maxkbytes)) {
-               kill(kid,SIGKILL);
+               xkill(kid, SIGKILL);
           }
 #endif
 #if !defined(CAN_USE_RLIMIT_CPU)
           if ((maxmillis>0) && (info.utime_ms>maxmillis)) {
-               kill(kid,SIGKILL);
+               xkill(kid, SIGKILL);
           }
 #endif
      } while (!exit_flag);
 
      end = get_time();
 
-     signal (SIGINT,  sigint_prev);
-     signal (SIGTERM, sigterm_prev);
-     signal (SIGHUP,  sighup_prev);
-     signal (SIGUSR1, sigusr1_prev);
-     signal (SIGUSR2, sigusr2_prev);
+     for (i = 0; caught_signals[i] != 0; ++i)
+          signal (caught_signals[i], signal_prev[caught_signals[i]]);
      signal (SIGPROF, sigprof_prev);
 
      if (WIFEXITED(kid_status)) {
@@ -317,6 +297,12 @@ main (int argc, char *argv[])
           switch (csig) {
           case SIGHUP: case SIGINT: case SIGUSR1: case SIGUSR2:
           case SIGKILL: case SIGALRM: case SIGTERM: case SIGPIPE:
+#ifdef SIGXCPU
+          case SIGXCPU:
+#endif
+#ifdef SIGXFSZ
+          case SIGXFSZ:
+#endif
                raise (csig);
           }
           fprintf (stderr, "%s: child died with signal %d, aborting.\n",
