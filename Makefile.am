@@ -60,6 +60,9 @@ memtime_SOURCES += freebsd.c
 memtime_LDADD = -lkvm
 AM_CPPFLAGS += -DCAN_USE_RLIMIT_VSIZE -DCAN_USE_RLIMIT_CPU
 endif
+if MINIX
+memtime_SOURCES += minix.c
+endif
 
 EXTRA_DIST = License
 doc_DATA = License README
