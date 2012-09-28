@@ -123,7 +123,7 @@ int set_mem_limit(unsigned long maxbytes)
 int set_cpu_limit(unsigned long maxseconds)
 {
 	struct  rlimit rl;
-	long int hardlimit=(long int)maxseconds*1.05;
+	unsigned long int hardlimit=maxseconds+2;
 	rl.rlim_cur=maxseconds; 
 	rl.rlim_max=hardlimit;
 	return setrlimit(RLIMIT_CPU,&rl);
