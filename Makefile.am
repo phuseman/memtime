@@ -25,6 +25,7 @@
 ACLOCAL_AMFLAGS = -I m4
 
 bin_PROGRAMS = memtime
+man_MANS = memtime.1
 
 AM_CPPFLAGS =
 memtime_SOURCES = memtime.c machdep.h
