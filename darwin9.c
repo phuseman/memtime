@@ -349,7 +349,8 @@ int
 set_cpu_limit (unsigned long maxseconds)
 {
     struct rlimit       rl;
+    unsigned long int hardlimit=maxseconds+2;
     rl.rlim_cur = maxseconds;
-    rl.rlim_max = maxseconds;
+    rl.rlim_max = hardlimit;
     return setrlimit (RLIMIT_CPU, &rl);
 }
