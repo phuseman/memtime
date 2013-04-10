@@ -47,12 +47,14 @@ usage (FILE *ffile, const char *progname)
 {
      fprintf (ffile,
               "Usage:\n%s [-t <interval>] [-e] [-m <maxkilobytes>] "
-              "[-c <maxcpuseconds>] <cmd> [<params>]\n", progname);
+              "[-c <maxcpuseconds>] [-o <filedescriptor>] <cmd> [<params>]\n", progname);
 }
 
 static int print_stats;
 static pid_t kid;
 int kid_signalled = 0;
+static int outfd = 2;
+static FILE* outf; /* initialized to stderr in main */
 
 static int
 xkill (pid_t kid, int signal)
@@ -116,12 +118,14 @@ main (int argc, char *argv[])
      memtime_info_t info;
      memset (&info, 0, sizeof info);
 
+     outf = stderr;
+
      if (argc < 2) {
           usage(stderr, argv[0]);
           exit(EXIT_FAILURE);
      }
 
-     while ((opt = getopt(argc, argv, "+eht:m:c:")) != -1) {
+     while ((opt = getopt(argc, argv, "+eht:m:c:o:")) != -1) {
 
           switch (opt) {
           case 'e' :
@@ -163,6 +167,23 @@ main (int argc, char *argv[])
                }
                maxmillis = 1000*maxseconds;
                break;
+
+          case 'o' :
+               outfd = strtoul(optarg, &endptr, 10);
+               if (errno) {
+                    perror("Illegal argument to o option");
+                    exit(EXIT_FAILURE);
+               } else if (endptr == optarg || *endptr != '\0') {
+                    fprintf(stderr, "Illegal argument to o option\n");
+                    exit(EXIT_FAILURE);
+               }
+               outf = fdopen(outfd, "w");
+               if (errno) {
+                    perror("Cannot open file descriptor given as argument to o option");
+                    exit(EXIT_FAILURE);
+               }
+               break;
+
           case 'h':
                usage (stdout, argv[0]);
                exit(EXIT_SUCCESS);
@@ -180,8 +201,8 @@ main (int argc, char *argv[])
      if (echo_args) {
           fprintf(stderr,"Command line: ");
           for (i = optind; i < argc; i++)
-               fprintf(stderr,"%s ", argv[i]);
-          fprintf(stderr,"\n");
+               fprintf(outf,"%s ", argv[i]);
+          fprintf(outf,"\n");
      }
 
      start = get_time();
@@ -234,13 +255,13 @@ main (int argc, char *argv[])
           if (print_stats) {
                end = get_time();
 
-               fprintf(stderr,"%.2f user, %.2f system, %.2f elapsed"
+               fprintf(outf,"%.2f user, %.2f system, %.2f elapsed"
                        " -- VSize = %luKB, RSS = %luKB\n",
                        (double)info.utime_ms/1000.0,
                        (double)info.stime_ms/1000.0,
                        (double)(end - start)/1000.0,
                        info.vsize_kb, info.rss_kb);
-               fflush(stdout);
+               fflush(outf);
                print_stats = 0;               
           }
 
@@ -273,9 +294,9 @@ main (int argc, char *argv[])
      signal (SIGPROF, sigprof_prev);
 
      if (WIFEXITED(kid_status)) {
-          fprintf(stderr, "Exit [%d]\n", WEXITSTATUS(kid_status));
+          fprintf(outf, "Exit [%d]\n", WEXITSTATUS(kid_status));
      } else {
-          fprintf(stderr, "Killed [%d]\n", WTERMSIG(kid_status));
+          fprintf(outf, "Killed [%d]\n", WTERMSIG(kid_status));
      }
 
      {
@@ -286,7 +307,7 @@ main (int argc, char *argv[])
           double kid_stime = ((double)kid_usage.ru_stime.tv_sec
                               + (double)kid_usage.ru_stime.tv_usec / 1E6);
 
-          fprintf(stderr, "%.2f user, %.2f system, %.2f elapsed -- "
+          fprintf(outf, "%.2f user, %.2f system, %.2f elapsed -- "
                   "Max VSize = %luKB, Max RSS = %luKB\n",
                   kid_utime, kid_stime, (double)(end - start) / 1000.0,
                   max_vsize, max_rss);
@@ -307,7 +328,7 @@ main (int argc, char *argv[])
 #endif
                raise (csig);
           }
-          fprintf (stderr, "%s: child died with signal %d, aborting.\n",
+          fprintf (outf, "%s: child died with signal %d, aborting.\n",
                    argv[0], csig);
           abort ();
      }
