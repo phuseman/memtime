@@ -200,13 +200,36 @@ int main (int argc, char *argv[] )
 			      + (double)kid_usage.ru_utime.tv_usec / 1E6);
 	  double kid_stime = ((double)kid_usage.ru_stime.tv_sec 
 			      + (double)kid_usage.ru_stime.tv_usec / 1E6);
+   FILE *LOG;
+   LOG=fopen("memtime_log.csv","a");
+   
+   
+   //if file empty write header
+   if(ftell(LOG)==0){
+     fprintf(LOG, "\"programm\", \"parameter\", \"user time [s]\", \"system time [s]\", \"elapsed time [s]\", \"max VSize [Kb]\", \"max RSS [Kb]\"\n");
+   }
+   
+   fprintf(LOG,"\"%s\", \"",argv[optind]);
+   for (i = optind+1; i < argc-1; i++) {
+     fprintf(LOG,"%s ", argv[i]);
+   }
 
-	  fprintf(stderr, "%.2f user, %.2f system, %.2f elapsed -- "
-		  "Max VSize = %dKB, Max RSS = %dKB\n", 
-		  kid_utime, kid_stime, (double)(end - start) / 1000.0,
-		  max_vsize, max_rss);
+if(argc-1>optind){
+   fprintf(LOG,"%s\", ",argv[argc-1]);
+} else {
+   fprintf(LOG,"\", ");
+}
+
+   fprintf(LOG, "%f, %f, %f, %d, %d\n", 
+       kid_utime, kid_stime, (double)(end - start) / 1000.0,
+       max_vsize, max_rss);
+   fprintf(stderr, "%.2f user, %.2f system, %.2f elapsed -- "
+       "Max VSize = %dKB, Max RSS = %dKB\n", 
+       kid_utime, kid_stime, (double)(end - start) / 1000.0,
+       max_vsize, max_rss);
      }
 
+     
      exit(EXIT_SUCCESS);
 }
 
