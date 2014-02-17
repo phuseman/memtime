@@ -31,6 +31,8 @@
 #include <stdio.h>
 #include <string.h>
 
+#include <sys/resource.h>
+
 #include "machdep.h"
 
 static int proc_fd = -1;
@@ -93,4 +95,21 @@ unsigned int get_time()
      }
 
      return (now.tv_sec * 1000) + (now.tv_usec / 1000);
+}
+
+int set_mem_limit(long int maxbytes)
+{
+	struct  rlimit rl;
+	long int softlimit=(long int)maxbytes*0.95;
+	rl.rlim_cur=softlimit; 
+	rl.rlim_max=maxbytes;
+	return setrlimit(RLIMIT_AS,&rl);
+}
+
+int set_cpu_limit(long int maxseconds)
+{
+	struct  rlimit rl;
+	rl.rlim_cur=maxseconds; 
+	rl.rlim_max=maxseconds;
+	return setrlimit(RLIMIT_CPU,&rl);
 }

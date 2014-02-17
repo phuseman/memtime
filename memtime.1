@@ -1,13 +1,14 @@
-.TH memtime 1 "May 2000"
+.TH memtime 1 "Dec 2001"
 .SH NAME
 memtime - Show the time and memory used by a command
 .SH SYNOPSIS
 .B memtime
-[\-t \fIperiod\fP] [\-e] \fIcommand\fP [\fIarg\fP...]
+[\-t \fIperiod\fP] [\-e] [\-m \fImaxkilobytes\fP] [\-t \fImaxseconds\fP] \fIcommand\fP [\fIarg\fP...]
 .SH DESCRIPTION
 The \fImemtime\fP program invoke \fIcommand\fP with the parameters \fIarg\fP,
 wait for its completion and print an estimation of the time and memory used by
-\fIcommand\fP.
+\fIcommand\fP. In addition user can specify time and space limits by \fImaxseconds\fP 
+and \fImaxkilobytes\fP to limit resources available for this process. 
 .PP
 .SH OPTIONS
 memtime accept the following options:
@@ -17,6 +18,12 @@ Print an estimation of the currently used resources every \fIperiod\fP seconds.
 .TP 8
 .B \-e
 Echo \fIcommand\fP and \fIarg\fP.
+.TP 8
+.B \-m \fImaxkilobytes\fP
+Memory limit for \fIcommand\fP. Implemented through RLIMIT mechanism.
+.TP 8
+.B \-c \fImaxcpuseconds\fP
+User time limit for \fIcommand\fP. Implemented through RLIMIT mechanism.
 .SH BUGS
 The update period is only approximate.
 .PP
@@ -43,3 +50,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 .SH AUTHOR
 Johan Bengtsson <johanb@Update.UU.SE>
+.PP
+Memory and time restriction functionality added by
+Juhan Ernits <juhan@cc.ioc.ee> in December, 2001.

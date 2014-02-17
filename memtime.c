@@ -34,9 +34,14 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <signal.h>
+
 #include <errno.h>
 
 #include "machdep.h"
+
+#define CAN_USE_RLIMIT_RSS
+#define CAN_USE_RLIMIT_CPU
 
 int main (int argc, char *argv[] )
 {
@@ -45,23 +50,28 @@ int main (int argc, char *argv[] )
      int    kid_status;
      int    i, opt, echo_args = 0, exit_flag;
      long int sample_time=0, time = 0;
+	 
+	 int maxkbytes=0; //kilobytes
+	 int maxseconds=0; //seconds
+	 long int maxmillis=0;
 
      unsigned int max_vsize = 0, max_rss = 0;
      unsigned int start, end;
 
      struct memtime_info info;
+//     struct rlimit currentl;
 
      if (argc < 2) {
 	  char *tmp = strrchr(argv[0], '/');       
 	  tmp = (tmp ? tmp + 1 : argv[0]);
 
 	  fprintf(stderr, 
-		  "%s: usage %s [-t <interval>] [-e] <cmd> [<params>]\n",
+		  "%s: usage %s [-t <interval>] [-e] [-m <maxkilobytes>] [-c <maxcpuseconds>] <cmd> [<params>]\n",
 		  tmp,tmp);
 	  exit(EXIT_FAILURE);
      }
 
-     while ((opt = getopt(argc, argv, "+et:")) != -1) {
+     while ((opt = getopt(argc, argv, "+et:m:c:")) != -1) {
 
 	  switch (opt) {
 	  case 'e' : 
@@ -76,6 +86,25 @@ int main (int argc, char *argv[] )
 		    exit(EXIT_FAILURE);
 	       }
 	       break;
+	  case 'm' : 
+	       errno = 0;
+	       maxkbytes = atoi(optarg);
+	       if (errno) {
+		    perror("Illegal argument to m option");
+		    exit(EXIT_FAILURE);
+	       }
+	       break;
+
+	  case 'c' : 
+	       errno = 0;
+	       maxseconds = atoi(optarg);
+	       if (errno) {
+		    perror("Illegal argument to c option");
+		    exit(EXIT_FAILURE);
+	       }
+		   maxmillis=1000*maxseconds;
+	       break;
+
 	  }
      }
 
@@ -95,6 +124,16 @@ int main (int argc, char *argv[] )
 	  exit(EXIT_FAILURE);
 	
      case 0 :	
+#if defined(CAN_USE_RLIMIT_RSS)	  
+	  if (maxkbytes>0) {
+	       set_mem_limit((long int)maxkbytes*1024);
+	  }
+#endif
+#if defined(CAN_USE_RLIMIT_CPU)	  
+	  if (maxseconds>0) {
+	       set_cpu_limit((long int)maxseconds);
+	  }
+#endif
 	  execvp(argv[optind], &(argv[optind]));
 	  perror("exec failed");
 	  exit(EXIT_FAILURE);
@@ -136,7 +175,16 @@ int main (int argc, char *argv[] )
 
 	  exit_flag = ((wait4(kid, &kid_status, WNOHANG, &kid_usage) == kid)
 		       && (WIFEXITED(kid_status) || WIFSIGNALED(kid_status)));
-	  
+#if !defined(CAN_USE_RLIMIT_RSS)	  
+	  if ((maxkbytes>0) && (max_vsize>maxkbytes)) {
+	  	kill(kid,SIGKILL);
+	  }
+#endif
+#if !defined(CAN_USE_RLIMIT_CPU)	  
+	  if ((maxmillis>0) && (info.utime_ms>maxmillis)) {
+	  	kill(kid,SIGKILL);
+	  }
+#endif	  
      } while (!exit_flag);
      
      end = get_time();

@@ -93,3 +93,20 @@ unsigned int get_time()
 
      return (now.tv_sec * 1000) + (now.tv_usec / 1000);
 }
+
+int set_mem_limit(long int maxbytes)
+{
+	struct  rlimit rl;
+	rl.rlim_cur=maxbytes; 
+	rl.rlim_max=maxbytes;
+	return setrlimit(RLIMIT_VMEM,&rl);
+}
+
+int set_cpu_limit(long int maxseconds)
+{
+	struct  rlimit rl;
+	rl.rlim_cur=maxseconds; 
+	rl.rlim_max=maxseconds;
+	return setrlimit(RLIMIT_CPU,&rl);
+
+}

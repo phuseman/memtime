@@ -35,5 +35,6 @@ struct memtime_info {
 int init_machdep(pid_t process);
 int get_sample(struct memtime_info *info);
 unsigned int get_time();
-
+int set_mem_limit(long int maxbytes);
+int set_cpu_limit(long int maxseconds);
 #endif /* MACHDEP_H */
