@@ -32,7 +32,7 @@ Additionally, I created a branch (logfile) in which the program writes its measu
 http://tiger.cs.tsinghua.edu.cn/Students/yangjl/memtime/
 I added their changes as a branch "Yang_64bit".
 
-Various improvements have been added by members of the university of twente (2009-2013):
+Various improvements have been added by members of the university of Twente (between 2009-2013):
 http://fmt.ewi.utwente.nl/gitweb/?p=memtime.git
 I added their commits into a branch "utwente".
 
