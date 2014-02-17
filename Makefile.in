@@ -28,7 +28,7 @@ LD   = $(CC)
 INSTALL = @INSTALL@
 
 # Options passed to the compiler and linker. 
-EXTRAFLAGS   = 
+EXTRAFLAGS   = -Wall
 EXTRALDFLAGS = 
 DEFS         =
 

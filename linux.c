@@ -1,4 +1,4 @@
-/* -*- mode: C; c-file-style: k&r; -*-
+/* -*- mode: C; c-file-style: "k&r"; -*-
  *---------------------------------------------------------------------------*
  *
  * Copyright (c) 2000, Johan Bengtsson
@@ -39,7 +39,7 @@ static int proc_fd = -1;
 int init_machdep(pid_t process)
 {
      char filename[64];
-     sprintf(filename, "/proc/%d/stat", process);
+     sprintf(filename, "/proc/%d/stat", (int)process);
      proc_fd = open(filename, O_RDONLY);
 
      return (proc_fd != -1);

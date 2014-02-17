@@ -1,4 +1,4 @@
-/* -*- mode: C; c-file-style: k&r; -*-
+/* -*- mode: C; c-file-style: "k&r"; -*-
  *---------------------------------------------------------------------------*
  *
  * Copyright (c) 2000, Johan Bengtsson
@@ -41,10 +41,10 @@ static int pstatus_fd = -1;
 int init_machdep(pid_t process)
 {
      char filename[64];
-     sprintf(filename, "/proc/%d/psinfo", process);
+     sprintf(filename, "/proc/%d/psinfo", (int)process);
      psinfo_fd = open(filename, O_RDONLY | O_RSYNC);
 
-     sprintf(filename, "/proc/%d/status", process);
+     sprintf(filename, "/proc/%d/status", (int)process);
      pstatus_fd = open(filename, O_RDONLY | O_RSYNC);
 
      return (psinfo_fd != -1 && pstatus_fd != -1);
@@ -62,14 +62,14 @@ int get_sample(struct memtime_info *info)
 	  return 0;
      }
 
-     info->rss_kb = pinfo.pr_rssize;
-     info->vsize_kb = pinfo.pr_size;
-
      rc = pread(pstatus_fd, &sinfo, sizeof(struct pstatus), 0);
 
      if (rc == -1) {
 	  return 0;
      }
+
+     info->rss_kb = pinfo.pr_rssize;
+     info->vsize_kb = pinfo.pr_size;
 
      info->utime_ms = ((1000 * sinfo.pr_utime.tv_sec) 
 		       + (sinfo.pr_utime.tv_nsec / 1000000));

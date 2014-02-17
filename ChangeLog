@@ -1,3 +1,13 @@
 2000-05-25  Johan Bengtsson  <johanb@DoCS.UU.SE>
+
+	* linux.c (init_machdep): Added explicit cast
+
+	* memtime.c (main): 
+	- Removed adaptive sample interval. 
+	- Added printing of exit status or terminating signal.
+	
+	* sunos5.c (init_machdep): Added explicit casts
+	(get_sample): Removed risk for partial updates
+
 	* Created.
 

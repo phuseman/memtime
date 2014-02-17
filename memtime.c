@@ -1,4 +1,4 @@
-/* -*- mode: C; c-file-style: k&r; -*-
+/* -*- mode: C; c-file-style: "k&r"; -*-
  *---------------------------------------------------------------------------*
  *
  * Copyright (c) 2000, Johan Bengtsson
@@ -43,13 +43,11 @@ int main (int argc, char *argv[] )
      struct rusage kid_usage;
      pid_t  kid;
      int    kid_status;
-     int    rc;
-     int    i, cnt=0, t1, t2;
-     int    opt, echo_args = 0;
-     long int sample_time=0, delay = 24000, time1=0, time2=1, acc=250;
+     int    i, opt, echo_args = 0, exit_flag;
+     long int sample_time=0, time = 0;
 
      unsigned int max_vsize = 0, max_rss = 0;
-     unsigned int start, end, elapse;
+     unsigned int start, end;
 
      struct memtime_info info;
 
@@ -112,53 +110,55 @@ int main (int argc, char *argv[] )
 
      do {
 
-	  if (!get_sample(&info)) {
-	       fprintf(stderr, "%s: Sampling failed.\n", argv[0]);
-	       exit(EXIT_FAILURE);
-	  }
+	  get_sample(&info);
 
 	  max_vsize = (info.vsize_kb > max_vsize ? info.vsize_kb : max_vsize);
 	  max_rss = (info.rss_kb > max_rss ? info.rss_kb : max_rss);
- 
+	  
 	  if (sample_time) {
-	       time1 += acc;
-	       if (time1 > 6000) {
-		    time1 = 0;
-		    time2++;
-		    if (time2 > sample_time) {
-
-			 end = get_time();
-
-			 fprintf(stderr,"%.2f user, %.2f system, "
-				 "%.2f elapsed -- VSize = %dKB, RSS = %dKB\n",
-				 (double)info.utime_ms/1000.0,
-				 (double)info.stime_ms/1000.0,
-				 (double)(end - start)/1000.0,
-				 info.vsize_kb, info.rss_kb);
-			 fflush(stdout);
- 
-			 time2 = 1;
-		    }
+	       time++;
+	       if (time == 10 * sample_time) {
+		    end = get_time();
+		    
+		    fprintf(stderr,"%.2f user, %.2f system, %.2f elapsed"
+			    " -- VSize = %dKB, RSS = %dKB\n",
+			    (double)info.utime_ms/1000.0,
+			    (double)info.stime_ms/1000.0,
+			    (double)(end - start)/1000.0,
+			    info.vsize_kb, info.rss_kb);
+		    fflush(stdout);
+		    
+		    time = 1;
 	       }
 	  }
-       
-	  if (cnt == 500) {
-	       delay = 240000;
-	       acc = 2000;
-	  } 
 
-	  usleep(delay);
+	  usleep(100000);
 
-     } while (wait4(kid, &kid_status, WNOHANG, &kid_usage) != kid);
-
+	  exit_flag = ((wait4(kid, &kid_status, WNOHANG, &kid_usage) == kid)
+		       && (WIFEXITED(kid_status) || WIFSIGNALED(kid_status)));
+	  
+     } while (!exit_flag);
+     
      end = get_time();
+     
+     if (WIFEXITED(kid_status)) {
+	  fprintf(stderr, "Exit [%d]\n", WEXITSTATUS(kid_status));
+     } else {
+	  fprintf(stderr, "Killed [%d]\n", WTERMSIG(kid_status));
+     }
 
-     fprintf(stderr,"%d.%02d user, %d.%02d system, %.2f elapsed -- "
-	     "Max VSize = %dKB, Max RSS = %dKB\n", 
-	     kid_usage.ru_utime.tv_sec, kid_usage.ru_utime.tv_usec / 10000,
-	     kid_usage.ru_stime.tv_sec, kid_usage.ru_stime.tv_usec / 10000,
-	     (double)(end - start) / 1000.0, max_vsize, max_rss);
+     {
+	  double kid_utime = ((double)kid_usage.ru_utime.tv_sec 
+			      + (double)kid_usage.ru_utime.tv_usec / 1E6);
+	  double kid_stime = ((double)kid_usage.ru_stime.tv_sec 
+			      + (double)kid_usage.ru_stime.tv_usec / 1E6);
 
-     exit (EXIT_SUCCESS);
+	  fprintf(stderr, "%.2f user, %.2f system, %.2f elapsed -- "
+		  "Max VSize = %dKB, Max RSS = %dKB\n", 
+		  kid_utime, kid_stime, (double)(end - start) / 1000.0,
+		  max_vsize, max_rss);
+     }
+
+     exit(EXIT_SUCCESS);
 }
 

@@ -1,4 +1,4 @@
-/* -*- mode: C; c-file-style: k&r; -*-
+/* -*- mode: C; c-file-style: "k&r"; -*-
  *---------------------------------------------------------------------------*
  *
  * Copyright (c) 2000, Johan Bengtsson
