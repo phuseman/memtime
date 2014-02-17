@@ -55,7 +55,7 @@ int main (int argc, char *argv[] )
 	 int maxseconds=0; //seconds
 	 long int maxmillis=0;
 
-     unsigned int max_vsize = 0, max_rss = 0;
+     long int max_vsize = 0, max_rss = 0;
      unsigned int start, end;
 
      struct memtime_info info;
@@ -124,16 +124,17 @@ int main (int argc, char *argv[] )
 	  exit(EXIT_FAILURE);
 	
      case 0 :	
-#if defined(CAN_USE_RLIMIT_RSS)	  
+
 	  if (maxkbytes>0) {
-	       set_mem_limit((long int)maxkbytes*1024);
+	       if(set_mem_limit((long int)maxkbytes*1024)) {
+		printf("error\n");;
+		}
 	  }
-#endif
-#if defined(CAN_USE_RLIMIT_CPU)	  
+  
 	  if (maxseconds>0) {
 	       set_cpu_limit((long int)maxseconds);
 	  }
-#endif
+
 	  execvp(argv[optind], &(argv[optind]));
 	  perror("exec failed");
 	  exit(EXIT_FAILURE);
@@ -159,7 +160,7 @@ int main (int argc, char *argv[] )
 	       if (time == 10 * sample_time) {
 		    end = get_time();
 		    
-		    fprintf(stderr,"%.2f user, %.2f system, %.2f elapsed"
+		    printf("%.2f user, %.2f system, %.2f elapsed"
 			    " -- VSize = %dKB, RSS = %dKB\n",
 			    (double)info.utime_ms/1000.0,
 			    (double)info.stime_ms/1000.0,
@@ -175,16 +176,15 @@ int main (int argc, char *argv[] )
 
 	  exit_flag = ((wait4(kid, &kid_status, WNOHANG, &kid_usage) == kid)
 		       && (WIFEXITED(kid_status) || WIFSIGNALED(kid_status)));
-#if !defined(CAN_USE_RLIMIT_RSS)	  
+	  
 	  if ((maxkbytes>0) && (max_vsize>maxkbytes)) {
 	  	kill(kid,SIGKILL);
 	  }
-#endif
-#if !defined(CAN_USE_RLIMIT_CPU)	  
+	  
 	  if ((maxmillis>0) && (info.utime_ms>maxmillis)) {
 	  	kill(kid,SIGKILL);
 	  }
-#endif	  
+ 
      } while (!exit_flag);
      
      end = get_time();
@@ -201,7 +201,7 @@ int main (int argc, char *argv[] )
 	  double kid_stime = ((double)kid_usage.ru_stime.tv_sec 
 			      + (double)kid_usage.ru_stime.tv_usec / 1E6);
 
-	  fprintf(stderr, "%.2f user, %.2f system, %.2f elapsed -- "
+	  printf("%.2f user, %.2f system, %.2f elapsed -- "
 		  "Max VSize = %dKB, Max RSS = %dKB\n", 
 		  kid_utime, kid_stime, (double)(end - start) / 1000.0,
 		  max_vsize, max_rss);

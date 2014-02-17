@@ -22,17 +22,6 @@
  *
  *---------------------------------------------------------------------------*/
 
-#include <sys/time.h>
-#include <asm/param.h>
-#include <sys/stat.h>
-#include <unistd.h>
-#include <fcntl.h>
-
-#include <stdio.h>
-#include <string.h>
-
-#include <sys/resource.h>
-
 #include "machdep.h"
 
 static int proc_fd = -1;
@@ -52,10 +41,11 @@ int get_sample(struct memtime_info *info)
      static char buffer[2048];
      char *tmp;
      int i, utime, stime;
-     unsigned int vsize, rss;
+     long int vsize, rss;
      int rc;
 
      lseek(proc_fd, 0, SEEK_SET);
+
      rc = read(proc_fd, buffer, 2048);
 
      if (rc == -1)
@@ -71,14 +61,15 @@ int get_sample(struct memtime_info *info)
      for (/* empty */; i < 22; i++)
 	  tmp = strchr(tmp + 1, ' ');
 
-     sscanf(tmp + 1, "%u %u", &vsize, &rss);
+     sscanf(tmp + 1, "%ld %ld", &vsize, &rss);
 
      info->utime_ms = utime * (1000 / HZ);
      info->stime_ms = stime * (1000 / HZ);
 
-     info->rss_kb = (rss * getpagesize()) / 1024;
      info->vsize_kb = vsize / 1024;
-
+     //printf("%ld\n", vsize);
+     info->rss_kb = (rss * getpagesize()) / 1024;
+     
      return 1;
 }
 
@@ -100,10 +91,10 @@ unsigned int get_time()
 int set_mem_limit(long int maxbytes)
 {
 	struct  rlimit rl;
-	long int softlimit=(long int)maxbytes*0.95;
-	rl.rlim_cur=softlimit; 
-	rl.rlim_max=maxbytes;
-	return setrlimit(RLIMIT_AS,&rl);
+	long int softlimit = (long int)maxbytes*0.95;
+	rl.rlim_cur = softlimit; 
+	rl.rlim_max = maxbytes;
+	return setrlimit(RLIMIT_AS, &rl);
 }
 
 int set_cpu_limit(long int maxseconds)
