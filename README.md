@@ -15,7 +15,7 @@ make install
 Sources were copied from http://www.update.uu.se/~johanb/memtime/
 
 I included the sources of version 1.0 to 1.3 to this repository.
-All credits go to Johan Bengtsson.
+All credits for the previous code go to Johan Bengtsson and Juhan Ernits.
 
 
 It seems that there are also copies of the latest sources on:
