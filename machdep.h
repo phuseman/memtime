@@ -24,12 +24,24 @@
 
 #ifndef MACHDEP_H
 #define MACHDEP_H
+
+#include <sys/time.h>
+#include <asm/param.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#include <fcntl.h>
+
+#include <stdio.h>
+#include <string.h>
+
+#include <sys/resource.h>
+
  
 struct memtime_info {
      unsigned int utime_ms;
      unsigned int stime_ms;
-     unsigned int rss_kb;
-     unsigned int vsize_kb;
+     long int rss_kb;
+     long int vsize_kb;
 };
 
 int init_machdep(pid_t process);
