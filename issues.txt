@@ -1,8 +1,0 @@
-From:
-http://freecode.com/projects/memtime
-25 Mar 2008 07:13 bugfunder
-
-issues with 32 bit overflow
-- does not allow/report more than 4Gb memory usage
-
-- does not allow runs of longer than 21666 seconds
